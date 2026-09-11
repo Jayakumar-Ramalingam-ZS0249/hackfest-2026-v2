@@ -1,0 +1,56 @@
+@use 'tokens' as *;
+
+.status-bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: $space-5;
+}
+
+.status-bar-chart__row {
+  display: grid;
+  grid-template-columns: 128px 1fr 44px;
+  align-items: center;
+  gap: $space-4;
+}
+
+.status-bar-chart__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: $color-gray-700; // text always an ink token, never the bar's hue
+}
+
+.status-bar-chart__track {
+  display: block;
+  height: 18px;
+  border-radius: $radius-pill;
+  background: $color-gray-100;
+  overflow: hidden;
+}
+
+.status-bar-chart__fill {
+  display: block;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  transition: width 640ms cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.status-bar-chart__fill--neutral {
+  background: $color-neutral-accent;
+}
+.status-bar-chart__fill--good {
+  background: $color-good;
+}
+.status-bar-chart__fill--warning {
+  background: $color-warning;
+}
+.status-bar-chart__fill--critical {
+  background: $color-critical;
+}
+
+.status-bar-chart__value {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: $color-gray-900;
+  text-align: right;
+}

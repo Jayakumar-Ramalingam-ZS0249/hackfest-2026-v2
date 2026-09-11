@@ -1,0 +1,7 @@
+<div
+  class="app-card"
+  [class.app-card--padded]="padded() && !flush()"
+  [class.app-card--hoverable]="hoverable()"
+>
+  <ng-content />
+</div>

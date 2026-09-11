@@ -1,0 +1,14 @@
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+.app-card {
+  @include card;
+
+  &--padded {
+    padding: $space-6;
+  }
+
+  &--hoverable {
+    @include card-hover-lift;
+  }
+}

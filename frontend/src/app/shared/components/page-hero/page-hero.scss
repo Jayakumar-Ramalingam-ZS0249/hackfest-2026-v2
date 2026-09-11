@@ -1,0 +1,38 @@
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+.page-hero {
+  background: $gradient-hero;
+  padding: $space-12 0 $space-10;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.05);
+}
+
+.page-hero__inner {
+  @include section-container;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $space-6;
+  flex-wrap: wrap;
+}
+
+.page-hero__eyebrow {
+  display: inline-block;
+  margin-bottom: $space-4;
+  padding: $space-1 $space-4;
+  border-radius: $radius-pill;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(47, 128, 237, 0.18);
+  color: $color-primary-dark;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.page-hero__actions {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  flex: none;
+}

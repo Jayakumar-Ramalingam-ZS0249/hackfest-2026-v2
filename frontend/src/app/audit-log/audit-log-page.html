@@ -1,0 +1,79 @@
+<app-page-hero
+  eyebrow="Governance"
+  title="Audit log"
+  subtitle="Every tool call the orchestration layer makes — and every human decision that followed — logged with inputs, outputs, and a timestamp for full traceability."
+/>
+
+<div class="page-content">
+  <app-card [flush]="true" class="filter-bar">
+    <label class="filter-bar__field">
+      <span>Filter by applicant ID</span>
+      <input
+        type="text"
+        placeholder="e.g. APP-1001"
+        [value]="applicantIdFilter()"
+        (input)="setFilter($any($event.target).value)"
+      />
+    </label>
+    @if (applicantIdFilter()) {
+      <button type="button" class="filter-bar__clear" (click)="clearFilter()">Clear</button>
+    }
+  </app-card>
+
+  @if (loadError()) {
+    <app-card>
+      <app-empty-state
+        title="Couldn't reach the Claims Copilot API"
+        message="Make sure the FastAPI backend is running on http://localhost:8000, then refresh this page."
+      />
+    </app-card>
+  } @else {
+    <app-card [flush]="true" class="table-card">
+      <div class="table-scroll">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Applicant</th>
+              <th>Tool / action</th>
+              <th>Inputs</th>
+              <th>Outputs</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (loading()) {
+              @for (i of [0, 1, 2, 3, 4]; track i) {
+                <tr>
+                  <td colspan="5"><app-skeleton height="18px" /></td>
+                </tr>
+              }
+            } @else {
+              @for (record of records(); track record.id) {
+                <tr>
+                  <td class="u-tabular audit-table__timestamp">{{ formatDateTime(record.timestamp) }}</td>
+                  <td>
+                    <a [routerLink]="['/applications', record.applicant_id]" class="table-view-link">{{ record.applicant_id }}</a>
+                  </td>
+                  <td>
+                    <span class="tool-pill" [class.tool-pill--human]="isHumanDecision(record)">
+                      {{ isHumanDecision(record) ? 'Human decision' : record.tool_name }}
+                    </span>
+                  </td>
+                  <td class="audit-table__json" [title]="formatRecord(record.inputs)">{{ formatRecord(record.inputs) }}</td>
+                  <td class="audit-table__json" [title]="formatRecord(record.outputs)">{{ formatRecord(record.outputs) }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (!loading() && records().length === 0) {
+        <app-empty-state
+          title="No tool calls recorded yet"
+          message="Run an AI review from the applications queue to start populating the audit trail."
+        />
+      }
+    </app-card>
+  }
+</div>

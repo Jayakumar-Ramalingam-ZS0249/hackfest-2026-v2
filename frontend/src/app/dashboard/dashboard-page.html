@@ -1,0 +1,83 @@
+<app-page-hero
+  eyebrow="Claims Operations"
+  title="Your claims, at a glance"
+  subtitle="A live view of every claim in flight — what's pending, what the AI has already flagged for review, and what's been decided today."
+/>
+
+<div class="page-content">
+  @if (loadError()) {
+    <app-card>
+      <app-empty-state
+        title="Couldn't reach the Claims Copilot API"
+        message="Make sure the FastAPI backend is running on http://localhost:8000, then refresh this page."
+      />
+    </app-card>
+  } @else {
+    <div class="kpi-grid">
+      @if (loading()) {
+        @for (i of [0, 1, 2, 3]; track i) {
+          <app-card><app-skeleton height="76px" /></app-card>
+        }
+      } @else {
+        <app-kpi-card
+          label="Total pending"
+          [value]="summary()!.total_pending.toString()"
+          hint="Awaiting or flagged for review"
+          accent="blue"
+        />
+        <app-kpi-card
+          label="Approved today"
+          [value]="summary()!.total_approved_today.toString()"
+          [hint]="summary()!.total_rejected_today + ' rejected today'"
+          accent="green"
+        />
+        <app-kpi-card
+          label="Avg. processing time"
+          [value]="formatDurationMinutes(summary()!.avg_processing_time_minutes)"
+          hint="From submission to final decision"
+          accent="purple"
+        />
+        <app-kpi-card
+          label="Total value approved"
+          [value]="formatCurrencyCompact(summary()!.total_value_approved)"
+          hint="Across all decided claims"
+          accent="amber"
+        />
+      }
+    </div>
+
+    <div class="dashboard-grid">
+      <app-card class="dashboard-grid__chart">
+        <h2 class="section-title">Claims by status</h2>
+        <p class="section-subtitle">{{ summary()?.total_applications ?? 0 }} applications total</p>
+        @if (loading()) {
+          <app-skeleton height="160px" />
+        } @else {
+          <app-status-bar-chart [data]="statusChartData()" />
+        }
+      </app-card>
+
+      <app-card class="dashboard-grid__attention">
+        <h2 class="section-title">Needs your attention</h2>
+        <p class="section-subtitle">Flagged by the AI review for human sign-off</p>
+        @if (loading()) {
+          <app-skeleton height="160px" />
+        } @else if (attentionList().length === 0) {
+          <app-empty-state title="All caught up" message="Nothing is waiting on a human decision right now." />
+        } @else {
+          <ul class="attention-list">
+            @for (a of attentionList(); track a.applicant_id) {
+              <li>
+                <a [routerLink]="['/applications', a.applicant_id]" class="attention-list__row">
+                  <span class="attention-list__name">{{ a.name }}</span>
+                  <span class="attention-list__meta">{{ a.claim_type }} · risk {{ a.risk_score.toFixed(2) }}</span>
+                  <span class="attention-list__amount">{{ formatCurrencyCompact(a.claim_amount_requested) }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </app-card>
+    </div>
+  }
+</div>

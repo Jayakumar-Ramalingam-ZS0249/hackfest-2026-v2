@@ -1,0 +1,15 @@
+<div class="status-bar-chart" role="img" [attr.aria-label]="'Claims by status, ' + total() + ' total'">
+  @for (item of data(); track item.key) {
+    <div class="status-bar-chart__row">
+      <span class="status-bar-chart__label">{{ item.label }}</span>
+      <span class="status-bar-chart__track">
+        <span
+          class="status-bar-chart__fill"
+          [class]="'status-bar-chart__fill--' + item.colorVar"
+          [style.width.%]="widthFor(item.value)"
+        ></span>
+      </span>
+      <span class="status-bar-chart__value">{{ item.value }}</span>
+    </div>
+  }
+</div>

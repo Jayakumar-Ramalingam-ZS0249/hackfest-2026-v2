@@ -1,0 +1,84 @@
+@use 'tokens' as *;
+
+@mixin card {
+  background: $color-white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  border: 1px solid rgba(17, 24, 39, 0.04);
+}
+
+@mixin card-hover-lift {
+  transition:
+    transform $transition-base,
+    box-shadow $transition-base;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $shadow-card-hover;
+  }
+}
+
+@mixin gradient-text {
+  // Solid fallback first so the text is never invisible if a browser can't
+  // clip it to the gradient below.
+  color: $color-primary-dark;
+  background: $gradient-headline;
+
+  @supports (background-clip: text) or (-webkit-background-clip: text) {
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+}
+
+@mixin pill-button-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  border-radius: $radius-pill;
+  font-family: $font-family-base;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition:
+    transform $transition-fast,
+    box-shadow $transition-base,
+    background $transition-base,
+    border-color $transition-base,
+    color $transition-base,
+    opacity $transition-fast;
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+}
+
+@mixin focus-ring {
+  &:focus-visible {
+    outline: 2px solid $color-primary;
+    outline-offset: 2px;
+  }
+}
+
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@mixin section-container {
+  max-width: $max-content-width;
+  margin: 0 auto;
+  padding: 0 $space-6;
+}

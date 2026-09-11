@@ -1,0 +1,48 @@
+@use 'tokens' as *;
+
+.kpi-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.kpi-card__accent-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+}
+
+.kpi-card__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: $color-gray-500;
+}
+
+.kpi-card__value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: $color-gray-900;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+.kpi-card__hint {
+  font-size: 0.8125rem;
+  color: $color-gray-400;
+}
+
+.kpi-card--blue .kpi-card__accent-bar {
+  background: $color-primary;
+}
+.kpi-card--green .kpi-card__accent-bar {
+  background: $color-good;
+}
+.kpi-card--amber .kpi-card__accent-bar {
+  background: $color-warning;
+}
+.kpi-card--purple .kpi-card__accent-bar {
+  background: $color-accent-purple;
+}

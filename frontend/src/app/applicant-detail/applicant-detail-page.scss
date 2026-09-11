@@ -1,0 +1,278 @@
+@use 'sass:color';
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+// --- Layout ---------------------------------------------------------------
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: $space-5;
+  align-items: start;
+}
+
+.detail-grid__main {
+  display: flex;
+  flex-direction: column;
+  gap: $space-5;
+  min-width: 0;
+}
+
+.detail-grid__side {
+  position: sticky;
+  top: 84px;
+}
+
+// --- Verification row ----------------------------------------------------
+.verification-row {
+  display: flex;
+  align-items: center;
+  gap: $space-4;
+  flex-wrap: wrap;
+}
+
+.verification-row__spacer {
+  flex: 1;
+}
+
+// --- Profile facts ---------------------------------------------------------
+.profile-facts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $space-4 $space-6;
+  margin: 0;
+}
+
+.profile-facts__item {
+  dt {
+    font-size: 0.75rem;
+    color: $color-gray-500;
+    margin-bottom: 2px;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: $color-gray-900;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// --- AI recommendation card -----------------------------------------------
+.ai-card {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+.ai-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-4;
+  padding: $space-4 0;
+}
+
+.ai-loading {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.ai-loading__caption {
+  margin: $space-2 0 0;
+  font-size: 0.8125rem;
+  color: $color-gray-500;
+}
+
+.recommendation-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $space-4;
+}
+
+.recommendation-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: $space-2 $space-5;
+  border-radius: $radius-pill;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.recommendation-pill--approve {
+  background: $color-good-bg;
+  color: $color-good;
+}
+.recommendation-pill--reject {
+  background: $color-critical-bg;
+  color: $color-critical;
+}
+.recommendation-pill--escalate {
+  background: $color-warning-bg;
+  color: $color-warning;
+}
+
+.amount-comparison {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  font-variant-numeric: tabular-nums;
+}
+
+.amount-comparison__requested {
+  color: $color-gray-400;
+  text-decoration: line-through;
+  font-size: 0.9375rem;
+}
+
+.amount-comparison__arrow {
+  color: $color-gray-300;
+}
+
+.amount-comparison__approved {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: $color-gray-900;
+}
+
+.amount-comparison__delta {
+  padding: 2px $space-3;
+  border-radius: $radius-pill;
+  background: $color-warning-bg;
+  color: $color-warning;
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  &--full {
+    background: $color-good-bg;
+    color: $color-good;
+  }
+}
+
+.rationale-text {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: $color-gray-700;
+  background: $color-gray-50;
+  border-radius: $radius-md;
+  padding: $space-4 $space-5;
+}
+
+.engine-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: $color-gray-500;
+  font-style: italic;
+}
+
+.provenance-strip {
+  margin: 0;
+  padding-top: $space-3;
+  border-top: 1px dashed $color-gray-200;
+  font-size: 0.75rem;
+  color: $color-gray-400;
+}
+
+// --- Human decision panel -------------------------------------------------
+.decision-card {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+.decision-field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $color-gray-700;
+
+  input,
+  textarea {
+    font-family: $font-family-base;
+    font-size: 0.9375rem;
+    font-weight: 400;
+    color: $color-gray-900;
+    border: 1px solid $color-gray-300;
+    border-radius: $radius-md;
+    padding: $space-3;
+    resize: vertical;
+
+    &:focus-visible {
+      outline: 2px solid $color-primary;
+      outline-offset: 1px;
+    }
+  }
+}
+
+.decision-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: $color-gray-400;
+}
+
+.decision-followup-note {
+  margin: 0;
+  padding: $space-2 $space-3;
+  border-radius: $radius-md;
+  background: $color-warning-bg;
+  color: color.adjust($color-warning, $lightness: -12%);
+  font-size: 0.8125rem;
+}
+
+.decision-actions {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  margin-top: $space-2;
+}
+
+.decision-recorded {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-2;
+  padding: $space-4;
+  border-radius: $radius-md;
+  background: $color-gray-50;
+}
+
+.decision-recorded__amount {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: $color-gray-900;
+}
+
+.decision-recorded__meta {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: $color-gray-500;
+}
+
+.decision-recorded__notes {
+  margin: 0;
+  font-size: 0.875rem;
+  color: $color-gray-700;
+  font-style: italic;
+}
+
+@media (max-width: 1080px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .detail-grid__side {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .profile-facts {
+    grid-template-columns: 1fr;
+  }
+}

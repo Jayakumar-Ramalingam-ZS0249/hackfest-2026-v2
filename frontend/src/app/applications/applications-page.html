@@ -1,0 +1,135 @@
+<app-page-hero
+  eyebrow="Applications"
+  title="Applications queue"
+  subtitle="Filter, sort, and trigger the AI-orchestrated review across every claim in the pipeline. Nothing is finalized until a human signs off."
+/>
+
+<div class="page-content">
+  <app-card [flush]="true" class="filter-bar">
+    <div class="filter-bar__statuses">
+      @for (option of statusFilters; track option.value) {
+        <button
+          type="button"
+          class="filter-chip"
+          [class.filter-chip--active]="statusFilter() === option.value"
+          (click)="setStatusFilter(option.value)"
+        >
+          {{ option.label }}
+        </button>
+      }
+    </div>
+    <div class="filter-bar__sort">
+      <label class="filter-bar__sort-label" for="sortBySelect">Sort by</label>
+      <select
+        id="sortBySelect"
+        class="filter-bar__select"
+        [value]="sortBy()"
+        (change)="setSortBy($any($event.target).value)"
+      >
+        @for (field of sortFields; track field.value) {
+          <option [value]="field.value">{{ field.label }}</option>
+        }
+      </select>
+      <button
+        type="button"
+        class="filter-bar__order"
+        (click)="toggleOrder()"
+        [attr.aria-label]="order() === 'asc' ? 'Sort ascending, click for descending' : 'Sort descending, click for ascending'"
+      >
+        @if (order() === 'asc') {
+          <svg viewBox="0 0 20 20" fill="none"><path d="M10 15V5M10 5l-4 4M10 5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        } @else {
+          <svg viewBox="0 0 20 20" fill="none"><path d="M10 5v10M10 15l-4-4M10 15l4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        }
+      </button>
+    </div>
+  </app-card>
+
+  @if (reviewError()) {
+    <div class="inline-banner inline-banner--error">
+      <span>{{ reviewError() }}</span>
+      <button type="button" (click)="reviewError.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <app-card [flush]="true" class="table-card">
+    <div class="table-scroll">
+      <table class="applications-table">
+        <thead>
+          <tr>
+            <th>Applicant</th>
+            <th>Claim</th>
+            <th>Amount requested</th>
+            <th>Risk</th>
+            <th>Status</th>
+            <th>AI result</th>
+            <th class="applications-table__actions-head">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            @for (i of [0, 1, 2, 3, 4, 5]; track i) {
+              <tr>
+                <td colspan="7"><app-skeleton height="20px" /></td>
+              </tr>
+            }
+          } @else {
+            @for (applicant of rows(); track applicant.applicant_id) {
+              <tr>
+                <td>
+                  <a [routerLink]="['/applications', applicant.applicant_id]" class="applicant-cell">
+                    <span class="applicant-cell__name">{{ applicant.name }}</span>
+                    <span class="applicant-cell__id">{{ applicant.applicant_id }}</span>
+                  </a>
+                </td>
+                <td>
+                  <span class="claim-type">{{ applicant.claim_type }}</span>
+                </td>
+                <td class="u-tabular">{{ formatCurrencyCompact(applicant.claim_amount_requested) }}</td>
+                <td>
+                  <span class="risk-meter" [class]="'risk-meter--' + riskSeverity(applicant.risk_score)">
+                    <span class="risk-meter__track">
+                      <span class="risk-meter__fill" [style.width.%]="applicant.risk_score * 100"></span>
+                    </span>
+                    <span class="risk-meter__value">{{ applicant.risk_score.toFixed(2) }}</span>
+                  </span>
+                </td>
+                <td><app-status-badge [status]="applicant.status" /></td>
+                <td>
+                  @if (applicant.ai_recommendation; as rec) {
+                    <span class="ai-pill" [class]="'ai-pill--' + rec.recommendation">
+                      {{ rec.recommendation }}
+                      @if (rec.approved_amount !== null) {
+                        · {{ formatCurrencyCompact(rec.approved_amount) }}
+                      }
+                    </span>
+                  } @else {
+                    <span class="u-muted">—</span>
+                  }
+                </td>
+                <td class="applications-table__actions">
+                  <app-button
+                    size="sm"
+                    variant="secondary"
+                    [loading]="isReviewing(applicant.applicant_id)"
+                    (pressed)="runReview(applicant, $event)"
+                  >
+                    Run AI Review
+                  </app-button>
+                  <a [routerLink]="['/applications', applicant.applicant_id]" class="table-view-link">View</a>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (!loading() && rows().length === 0) {
+      <app-empty-state
+        title="No applications match this filter"
+        message="Try a different status filter to see more of the queue."
+      />
+    }
+  </app-card>
+</div>

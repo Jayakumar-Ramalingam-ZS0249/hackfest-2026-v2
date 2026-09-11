@@ -1,0 +1,50 @@
+@use 'tokens' as *;
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-1 $space-3;
+  border-radius: $radius-pill;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $color-gray-700; // text always stays an ink token, never the status hue
+  background: $color-gray-100;
+  white-space: nowrap;
+}
+
+.status-badge__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: currentColor;
+}
+
+.status-badge--pending_review {
+  background: $color-neutral-accent-bg;
+  .status-badge__dot {
+    color: $color-neutral-accent;
+  }
+}
+
+.status-badge--approved {
+  background: $color-good-bg;
+  .status-badge__dot {
+    color: $color-good;
+  }
+}
+
+.status-badge--rejected {
+  background: $color-critical-bg;
+  .status-badge__dot {
+    color: $color-critical;
+  }
+}
+
+.status-badge--needs_human_review {
+  background: $color-warning-bg;
+  .status-badge__dot {
+    color: $color-warning;
+  }
+}

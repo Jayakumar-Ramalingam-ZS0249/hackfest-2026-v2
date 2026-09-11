@@ -1,0 +1,12 @@
+<div class="empty-state">
+  <svg class="empty-state__icon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+    <rect x="6" y="10" width="36" height="28" rx="6" stroke="currentColor" stroke-width="2" />
+    <path d="M6 18h36" stroke="currentColor" stroke-width="2" />
+    <path d="M14 26h10M14 31h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+  </svg>
+  <p class="empty-state__title">{{ title() }}</p>
+  @if (message()) {
+    <p class="empty-state__message">{{ message() }}</p>
+  }
+  <ng-content />
+</div>
