@@ -1,0 +1,37 @@
+:root {
+  --color-primary: #1e3a8a;      // deep blue (sidebar, headings)
+  --color-primary-light: #2f5fd6; // active nav / accents
+  --color-accent-green: #16a34a;  // high confidence
+  --color-accent-amber: #d97706;  // needs review
+  --color-accent-red: #dc2626;    // errors / delete
+  --color-bg: #f5f7fb;
+  --color-card: #ffffff;
+  --color-border: #e5e9f2;
+  --color-text: #1f2937;
+  --color-text-muted: #6b7280;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --shadow-soft: 0 2px 10px rgba(16, 24, 40, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, select {
+  font-family: inherit;
+}

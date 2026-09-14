@@ -1,0 +1,167 @@
+<div class="shell">
+
+  <!-- ============ TOP HEADER ============ -->
+  <header class="header">
+    <div class="header-left">
+      <span class="header-icon">+</span>
+      <span class="header-title">Medical Command Center</span>
+    </div>
+    <div class="header-right">
+      <span class="admin-name">Clinical Admin</span>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-badge">CC</span>
+        <div>
+          <div class="brand-title">Command Center</div>
+          <div class="brand-subtitle">Automation Plan</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-item active">
+          <span>Fax Intake</span>
+          <span class="badge" *ngIf="faxQueue.length">{{ faxQueue.length }}</span>
+        </div>
+        <div class="nav-item">Resolved</div>
+        <div class="nav-item">Sent</div>
+        <div class="nav-item">Queued</div>
+        <div class="nav-item">
+          <span>Needs Review</span>
+          <span class="badge badge-amber" *ngIf="activeFax?.needs_review_count">
+            {{ activeFax?.needs_review_count }}
+          </span>
+        </div>
+        <div class="nav-item">Failed</div>
+        <div class="nav-item">Deleted</div>
+        <div class="nav-item">Locked</div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-dot"></div>
+        <div>
+          <div class="status-title">System Status</div>
+          <div class="status-subtitle">Backend Connected</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============ MAIN CONTENT ============ -->
+    <main class="main">
+
+      <!-- Upload bar -->
+      <div class="upload-bar">
+        <label class="upload-btn">
+          + Upload Fax (PDF)
+          <input type="file" accept="application/pdf" (change)="onFileSelected($event)" hidden />
+        </label>
+        <span *ngIf="isUploading" class="upload-status">Running extraction pipeline…</span>
+        <span *ngIf="errorMessage" class="upload-error">{{ errorMessage }}</span>
+      </div>
+
+      <!-- Fax queue list -->
+      <div class="queue-list" *ngIf="faxQueue.length">
+        <div
+          class="queue-item"
+          *ngFor="let f of faxQueue"
+          [class.selected]="activeFax?.id === f.id"
+          (click)="selectFax(f.id)"
+        >
+          <span class="queue-filename">{{ f.filename }}</span>
+          <span class="queue-confidence" [class.low]="f.overall_confidence < 90">
+            {{ f.overall_confidence }}%
+          </span>
+          <span class="queue-status" [ngClass]="'status-' + f.status">{{ f.status }}</span>
+        </div>
+      </div>
+
+      <ng-container *ngIf="activeFax">
+
+        <!-- AI Auto-Fill banner -->
+        <div class="ai-banner" [ngClass]="overallBannerClass()">
+          <div class="ai-banner-text">
+            <span class="ai-sparkle">✨</span>
+            <strong>AI Auto-Fill {{ activeFax.status === 'resolved' ? 'Complete' : 'Active' }} — {{ activeFax.overall_confidence }}% Overall Confidence</strong>
+            <div class="ai-banner-sub" *ngIf="activeFax.needs_review_count">
+              {{ activeFax.needs_review_count }} field(s) require manual review before final submission.
+            </div>
+          </div>
+          <div class="ai-banner-actions">
+            <button class="btn btn-ghost" (click)="reRunExtraction()">Re-run Extraction</button>
+            <button class="btn btn-primary" (click)="approveAndResolve()">Approve &amp; Resolve Fax</button>
+          </div>
+        </div>
+
+        <div class="panels">
+
+          <!-- LEFT: Patient information form -->
+          <section class="panel">
+            <div class="panel-header">
+              <span>👤 Patient Information</span>
+              <span class="confidence-chip">{{ activeFax.overall_confidence }}% Confident</span>
+            </div>
+
+            <div class="field-grid">
+              <div class="field" *ngFor="let key of fieldOrder">
+                <label>
+                  {{ fieldLabels[key] }}
+                  <span
+                    class="field-confidence"
+                    [ngClass]="statusClass(activeFax.fields[key].status)"
+                  >
+                    {{ confidencePercent(activeFax.fields[key].confidence) }}
+                    {{ activeFax.fields[key].status === 'auto_fill' ? '✓' : 'Review ⚠' }}
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="activeFax.fields[key].value"
+                  [ngClass]="statusClass(activeFax.fields[key].status)"
+                />
+              </div>
+            </div>
+
+            <div class="eligibility-block">
+              <div class="panel-subheader">Eligibility (auto-populated, read-only)</div>
+              <div class="eligibility-grid">
+                <div><span>Client:</span> {{ activeFax.eligibility.client || '—' }}</div>
+                <div><span>Plan:</span> {{ activeFax.eligibility.plan || '—' }}</div>
+                <div><span>Group No.:</span> {{ activeFax.eligibility.group_no || '—' }}</div>
+                <div><span>Eligibility Status:</span> {{ activeFax.eligibility.eligibility_status }}</div>
+              </div>
+              <div class="eligibility-warning" *ngIf="!activeFax.eligibility.found">
+                ⚠ No eligibility match found for this member number — this fax cannot be auto-resolved.
+              </div>
+            </div>
+          </section>
+
+          <!-- RIGHT: Received document / fax preview -->
+          <section class="panel">
+            <div class="panel-header">
+              <span>📄 Received Document — {{ activeFax.filename }}</span>
+            </div>
+            <div class="fax-preview">
+              <pre>{{ activeFax.raw_text }}</pre>
+            </div>
+            <div class="provenance-strip">
+              Recommendation generated by:
+              <span *ngFor="let p of activeFax.provenance">{{ p.tool }} </span>
+              at {{ activeFax.received_at }}
+            </div>
+          </section>
+
+        </div>
+      </ng-container>
+
+      <div class="empty-state" *ngIf="!activeFax && !faxQueue.length">
+        Upload a fax PDF above to run the AI extraction pipeline.
+      </div>
+
+    </main>
+  </div>
+</div>

@@ -1,11 +1,20 @@
 # Python
 backend/.venv/
 backend/**/__pycache__/
+**/__pycache__/
 *.pyc
+
+# Node / Angular
+frontend/node_modules/
+frontend/.angular/
+frontend/dist/
 
 # Environment
 .env
 backend/.env
+
+# Logs
+npm-debug.log*
 
 # System files
 .DS_Store
