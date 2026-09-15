@@ -19,6 +19,7 @@ sequences them.
 
 import time
 import uuid
+from typing import Callable, Optional
 
 from ..core.config import get_settings
 from ..services.ai.factory import get_ai_provider
@@ -26,6 +27,18 @@ from ..services.documents.pdf_service import PdfExtractionService
 from ..services.documents.relevance_service import DocumentRelevanceService
 from ..services.extraction.claim_extraction_service import CANONICAL_FIELDS, ClaimExtractionService
 from .eligibility import run_eligibility_lookup
+
+# (stage_key, human label, percent-complete) -- reported at real checkpoints
+# in the pipeline below, not on a timer. Percent is coarse/approximate by
+# nature (there is no finer-grained instrumentation inside PyMuPDF/OCR/the AI
+# call itself) but every value corresponds to an actual stage transition that
+# really happened, never a fabricated/interpolated number.
+ProgressCallback = Optional[Callable[[str, str, int], None]]
+
+
+def _report(on_progress: ProgressCallback, stage: str, label: str, percent: int) -> None:
+    if on_progress:
+        on_progress(stage, label, percent)
 
 
 def _provenance(tool_name: str) -> dict:
@@ -40,12 +53,19 @@ def _empty_eligibility() -> dict:
     return {"found": False, "client": None, "plan": None, "group_no": None, "eligibility_status": "Not Found"}
 
 
-def run_pipeline(pdf_bytes: bytes, filename: str) -> dict:
+def run_pipeline(pdf_bytes: bytes, filename: str, on_progress: ProgressCallback = None) -> dict:
     settings = get_settings()
     provenance_log = [_provenance("pdf_extraction")]
 
+    _report(on_progress, "uploading", "Uploading document…", 5)
+
     pdf_result = PdfExtractionService.extract(pdf_bytes)
     raw_text = pdf_result.full_text
+
+    if pdf_result.ocr_used:
+        _report(on_progress, "ocr", "Running OCR on scanned pages…", 35)
+    else:
+        _report(on_progress, "extracting_text", "Extracting document text…", 25)
 
     relevance = DocumentRelevanceService.analyze(
         text=raw_text,
@@ -55,6 +75,7 @@ def run_pipeline(pdf_bytes: bytes, filename: str) -> dict:
         review_threshold=settings.review_match_threshold,
     )
     provenance_log.append(_provenance("relevance_analysis"))
+    _report(on_progress, "checking_relevance", "Checking document relevance…", 45)
 
     document_info = {
         "documentType": relevance.document_type,
@@ -68,6 +89,7 @@ def run_pipeline(pdf_bytes: bytes, filename: str) -> dict:
     }
 
     if relevance.status == "invalid":
+        _report(on_progress, "rejected", "Document rejected — insufficient claim data", 100)
         # RULE 8: an irrelevant/invalid document NEVER gets a fabricated
         # extraction record. Return the record with empty fields so the
         # frontend shows the validation modal instead of populated data.
@@ -89,6 +111,7 @@ def run_pipeline(pdf_bytes: bytes, filename: str) -> dict:
         return record
 
     ai_provider = get_ai_provider(settings)
+    _report(on_progress, "ai_extraction", f"Extracting claim fields with {ai_provider.name}…", 60)
     extraction = ClaimExtractionService.extract(
         pages=pdf_result.pages,
         full_text=raw_text,
@@ -96,6 +119,7 @@ def run_pipeline(pdf_bytes: bytes, filename: str) -> dict:
         low_confidence_threshold=settings.low_confidence_threshold,
     )
     provenance_log.append(_provenance(f"claim_extraction:{extraction.extraction_source}"))
+    _report(on_progress, "verifying", "Verifying extracted values against source…", 78)
 
     # Recompute relevance now that we know how many fields were actually
     # extracted, so the match score reflects real field coverage.
@@ -131,9 +155,11 @@ def run_pipeline(pdf_bytes: bytes, filename: str) -> dict:
         }
 
     member_field = normalized_fields.get("memberId", {})
+    _report(on_progress, "eligibility", "Checking member eligibility…", 90)
     eligibility = run_eligibility_lookup(
         {"member_number": {"value": member_field.get("value") or "", "confidence": member_field.get("confidence") or 0.0}}
     )
+    _report(on_progress, "finalizing", "Finalizing claim record…", 97)
 
     confidences = [f.confidence for f in extraction.fields.values() if f.value]
     overall_confidence = round((sum(confidences) / len(confidences)) * 100, 1) if confidences else 0

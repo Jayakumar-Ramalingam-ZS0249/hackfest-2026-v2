@@ -106,6 +106,50 @@ def test_chat_without_ai_provider_never_hallucinates(client):
     assert "father" not in body["answer"].lower()
 
 
+def test_delete_claim_hides_it_from_default_list_but_keeps_it_retrievable(client):
+    upload = client.post("/api/faxes/upload", files={"file": ("claim.pdf", make_pdf(VALID_CLAIM_TEXT), "application/pdf")})
+    claim_id = upload.json()["id"]
+
+    delete_resp = client.delete(f"/api/claims/{claim_id}")
+    assert delete_resp.status_code == 200
+
+    all_list = client.get("/api/claims").json()
+    assert all(c["id"] != claim_id for c in all_list)
+
+    deleted_list = client.get("/api/claims", params={"status": "deleted"}).json()
+    assert any(c["id"] == claim_id for c in deleted_list)
+
+    # Still directly retrievable so the Deleted view can show/restore it.
+    detail = client.get(f"/api/claims/{claim_id}")
+    assert detail.status_code == 200
+
+
+def test_restore_claim_returns_it_to_the_default_list(client):
+    upload = client.post("/api/faxes/upload", files={"file": ("claim.pdf", make_pdf(VALID_CLAIM_TEXT), "application/pdf")})
+    claim_id = upload.json()["id"]
+    client.delete(f"/api/claims/{claim_id}")
+
+    restore_resp = client.post(f"/api/claims/{claim_id}/restore")
+    assert restore_resp.status_code == 200
+
+    all_list = client.get("/api/claims").json()
+    assert any(c["id"] == claim_id for c in all_list)
+
+
+def test_chat_is_blocked_on_deleted_claim(client):
+    upload = client.post("/api/faxes/upload", files={"file": ("claim.pdf", make_pdf(VALID_CLAIM_TEXT), "application/pdf")})
+    claim_id = upload.json()["id"]
+    client.delete(f"/api/claims/{claim_id}")
+
+    r = client.post(f"/api/claims/{claim_id}/chat", json={"message": "What is the claim amount?"})
+    assert r.status_code == 422
+
+
+def test_status_filter_rejects_unknown_value(client):
+    r = client.get("/api/claims", params={"status": "not-a-real-status"})
+    assert r.status_code == 400
+
+
 def test_dashboard_statistics_reflect_real_uploads_not_fake_numbers(client):
     before = client.get("/api/dashboard/statistics").json()
     client.post("/api/faxes/upload", files={"file": ("claim.pdf", make_pdf(VALID_CLAIM_TEXT), "application/pdf")})

@@ -20,6 +20,7 @@ Design choices, and why:
   not large corpora -- see the architecture report for that tradeoff.
 """
 
+import logging
 import re
 import time
 import uuid
@@ -28,7 +29,25 @@ from dataclasses import dataclass, field as dataclass_field
 from ..ai.base import AIChatResult, AIProvider
 from ..extraction.claim_extraction_service import ExtractedField
 
+logger = logging.getLogger("app.chat")
+
 NOT_FOUND_MESSAGE = "I could not find this information in the analyzed claim documents."
+
+# Distinct from NOT_FOUND_MESSAGE on purpose: that one means "the AI looked and
+# the answer genuinely isn't in the document." These two mean the AI could not
+# be consulted at all (service/quota/network error) or gave an answer that
+# failed the code-level grounding check -- a very different situation for the
+# manager to understand, so they get honest, differently-worded messages
+# instead of all three cases looking identical in the transcript.
+AI_UNAVAILABLE_MESSAGE = (
+    "The AI Claim Assistant could not be reached right now (service error or usage limit). "
+    "You can still ask about a specific field -- patient name, hospital, doctor, diagnosis, "
+    "dates, or any of the claim amounts -- and I'll answer directly from the extracted data."
+)
+UNVERIFIED_MESSAGE = (
+    "I found a possible answer but could not verify it against the source document, so I won't "
+    "guess. Try rephrasing the question or asking about a specific field directly."
+)
 
 SYSTEM_PROMPT = """You are an Insurance Claim Document Assistant.
 
@@ -103,6 +122,60 @@ AMBIGUITY_GROUPS: list[dict] = [
         "candidates": ["memberId", "policyNumber", "claimNumber"],
     },
 ]
+
+
+# Direct, deterministic single-field lookup -- covers the common factual
+# questions the quick-action chips themselves suggest ("What is the claim
+# amount?", "What hospital treated the patient?", "What is the patient's
+# name?"). These are answered straight from the extracted-fields dict with
+# NO ai_provider.chat() call at all, so they can never hallucinate and never
+# depend on an external AI call succeeding. Only genuinely open-ended
+# questions (not matching any phrase below) fall through to the AI.
+# Phrases are checked longest-first so e.g. "hospital bill" (hospitalBillAmount)
+# wins over the shorter "hospital" (hospitalName) when both would match.
+FIELD_KEYWORDS: dict[str, list[str]] = {
+    "hospitalBillAmount": ["hospital bill", "total bill amount", "billed amount"],
+    "approvedAmount": ["approved amount", "amount approved", "how much was approved"],
+    "deductibleAmount": ["deductible amount", "deductible"],
+    "claimAmount": ["claim amount", "total claim amount", "how much is the claim"],
+    "dateOfBirth": ["date of birth", "birth date", "dob", "when was the patient born", "born"],
+    "admissionDate": ["admission date", "admitted on", "when was the patient admitted"],
+    "dischargeDate": ["discharge date", "discharged on", "when was the patient discharged"],
+    "memberId": ["member id", "member number", "member's id"],
+    "policyNumber": ["policy number", "policy id"],
+    "claimNumber": ["claim number", "claim reference", "claim id"],
+    "insuranceCompany": ["insurance company", "insurer", "insurance provider"],
+    "hospitalName": ["hospital", "treated at", "which hospital"],
+    "doctorName": ["doctor", "physician", "treating doctor"],
+    "diagnosis": ["diagnosis", "diagnosed with", "medical condition"],
+    "patientName": ["patient's name", "patients name", "patient name", "who is the patient", "name of the patient"],
+}
+
+
+def _direct_field_answer(question: str, fields: dict[str, ExtractedField]) -> tuple[str, list["ChatSource"]] | None:
+    q = question.lower()
+    best: tuple[int, str] | None = None
+    for field_name, phrases in FIELD_KEYWORDS.items():
+        for phrase in phrases:
+            if phrase in q and (best is None or len(phrase) > best[0]):
+                best = (len(phrase), field_name)
+    if best is None:
+        return None
+
+    field_name = best[1]
+    label = FIELD_LABELS.get(field_name, field_name)
+    f = fields.get(field_name)
+    if not f or not f.value:
+        return f"{label} was not found in this claim's documents.", []
+
+    verified_note = " (manager-verified)" if f.manager_verified else ""
+    conflict_note = ""
+    if f.conflicts:
+        candidates = "; ".join(f"page {c.page}: {c.value}" for c in f.conflicts)
+        conflict_note = f" Note: conflicting values were also found -- {candidates}."
+    answer = f"{label}: {f.value}{verified_note}.{conflict_note}"
+    source = ChatSource(field=field_name, page=f.page, source_text=f.source_text)
+    return answer, [source]
 
 
 @dataclass
@@ -254,6 +327,11 @@ class ChatService:
             answer, sources = quick
             return answer, sources, []
 
+        direct = _direct_field_answer(question, fields)
+        if direct:
+            answer, sources = direct
+            return answer, sources, []
+
         if not ai_provider.supports_chat:
             return (
                 "The AI Claim Assistant is not configured. Set AI_PROVIDER=gemini and AI_API_KEY in the "
@@ -265,8 +343,9 @@ class ChatService:
         context = _build_context(question, fields, pages)
         try:
             result: AIChatResult = ai_provider.chat(question=question, context=context, system_prompt=SYSTEM_PROMPT)
-        except Exception:
-            return ("I could not confidently verify this information from the claim documents.", [], [])
+        except Exception as exc:
+            logger.warning("chat_ai_call_failed: %s", exc)
+            return (AI_UNAVAILABLE_MESSAGE, [], [])
 
         if not result.found:
             return (NOT_FOUND_MESSAGE, [], [])
@@ -275,7 +354,7 @@ class ChatService:
         # claims a source snippet, that snippet must actually appear in the
         # context we sent. Otherwise treat it as ungrounded.
         if result.source_text and result.source_text.lower() not in context.lower():
-            return ("I could not confidently verify this information from the claim documents.", [], [])
+            return (UNVERIFIED_MESSAGE, [], [])
 
         source = ChatSource(field=result.source_field, page=result.source_page, source_text=result.source_text)
         return result.answer, [source], []

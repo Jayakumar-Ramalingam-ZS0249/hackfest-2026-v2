@@ -1,0 +1,289 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Dashboard</h1>
+      <p class="page-subtitle">
+        Overview of claims, documents and operational performance — every figure below is computed live from the
+        claim database.
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <span class="last-updated" *ngIf="lastUpdated">Last updated {{ lastUpdated | date: "shortTime" }}</span>
+      <button class="btn btn-ghost-dark filters-toggle" (click)="toggleFilters()">Filters ▾</button>
+      <button class="btn btn-ghost-dark" (click)="refresh()" [disabled]="loading">{{ loading ? "Refreshing…" : "↻ Refresh" }}</button>
+      <button class="btn btn-primary" (click)="exportCsv()" [disabled]="exporting || !overview?.summary?.totalClaims">
+        {{ exporting ? "Exporting…" : "Export CSV" }}
+      </button>
+    </div>
+  </div>
+
+  <div class="filter-bar" [class.open]="filtersOpen">
+    <div class="filter-bar-title">Dashboard Filters</div>
+    <div class="filter-grid">
+      <label class="filter-field">
+        <span>Date Range</span>
+        <select [(ngModel)]="datePreset">
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="last7">Last 7 Days</option>
+          <option value="last30">Last 30 Days</option>
+          <option value="this_month">This Month</option>
+          <option value="last_month">Last Month</option>
+          <option value="this_quarter">This Quarter</option>
+          <option value="custom">Custom Range</option>
+        </select>
+      </label>
+      <ng-container *ngIf="datePreset === 'custom'">
+        <label class="filter-field">
+          <span>From</span>
+          <input type="date" [(ngModel)]="customFrom" />
+        </label>
+        <label class="filter-field">
+          <span>To</span>
+          <input type="date" [(ngModel)]="customTo" />
+        </label>
+      </ng-container>
+      <label class="filter-field">
+        <span>Status</span>
+        <select [(ngModel)]="statusFilter">
+          <option value="all">All</option>
+          <option value="auto_filled">Queued</option>
+          <option value="needs_review">Needs Review</option>
+          <option value="resolved">Resolved</option>
+          <option value="invalid">Invalid</option>
+        </select>
+      </label>
+      <label class="filter-field">
+        <span>Insurance</span>
+        <select [(ngModel)]="insuranceFilter">
+          <option value="all">All Providers</option>
+          <option *ngFor="let p of providers" [value]="p">{{ p }}</option>
+        </select>
+      </label>
+      <label class="filter-field">
+        <span>Confidence</span>
+        <select [(ngModel)]="confidenceFilter">
+          <option value="all">All</option>
+          <option value="high">High Confidence</option>
+          <option value="medium">Medium Confidence</option>
+          <option value="low">Low Confidence</option>
+          <option value="needs_review">Needs Review</option>
+        </select>
+      </label>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary" (click)="applyFilters()">Apply Filters</button>
+      <button class="btn btn-ghost-dark" (click)="resetFilters()">Reset</button>
+    </div>
+  </div>
+
+  <div class="error-banner" *ngIf="error">
+    {{ error }}
+    <button class="btn btn-ghost-dark" (click)="refresh()">Retry</button>
+  </div>
+
+  <div class="skeleton-grid" *ngIf="loading && !overview">
+    <div class="skeleton-tile" *ngFor="let i of [1, 2, 3, 4, 5, 6]"></div>
+  </div>
+
+  <ng-container *ngIf="overview as o">
+    <div class="empty-state" *ngIf="o.summary.totalClaims === 0">
+      <div class="empty-title">No claims found</div>
+      <div class="empty-subtitle">No claims match the selected filters.</div>
+      <button class="btn btn-ghost-dark" (click)="resetFilters()">Reset Filters</button>
+    </div>
+
+    <ng-container *ngIf="o.summary.totalClaims > 0">
+      <!-- KPI grid -->
+      <div class="kpi-grid">
+        <a routerLink="/queue/all" class="kpi-card accent-primary">
+          <div class="kpi-value">{{ o.summary.totalClaims }}</div>
+          <div class="kpi-label">Total Claims</div>
+        </a>
+        <a routerLink="/queue/queued" class="kpi-card">
+          <div class="kpi-value">{{ o.summary.queued }}</div>
+          <div class="kpi-label">Queued</div>
+        </a>
+        <a routerLink="/queue/needs_review" class="kpi-card accent-amber">
+          <div class="kpi-value">{{ o.summary.pendingReview }}</div>
+          <div class="kpi-label">Pending Review</div>
+        </a>
+        <a routerLink="/queue/resolved" class="kpi-card accent-green">
+          <div class="kpi-value">{{ o.summary.resolved }}</div>
+          <div class="kpi-label">Resolved</div>
+        </a>
+        <a routerLink="/queue/invalid" class="kpi-card accent-red">
+          <div class="kpi-value">{{ o.summary.invalid }}</div>
+          <div class="kpi-label">Invalid / Rejected</div>
+        </a>
+        <div class="kpi-card">
+          <div class="kpi-value">{{ o.documentAnalytics.processed }}</div>
+          <div class="kpi-label">Documents Processed</div>
+        </div>
+        <div class="kpi-card accent-green">
+          <div class="kpi-value">{{ o.quality.highConfidenceFields }}</div>
+          <div class="kpi-label">High Confidence Fields</div>
+        </div>
+        <div class="kpi-card accent-red">
+          <div class="kpi-value">{{ o.quality.lowConfidenceFields }}</div>
+          <div class="kpi-label">Low Confidence Fields</div>
+        </div>
+      </div>
+
+      <!-- Financial summary -->
+      <div class="panel">
+        <div class="panel-header"><span>Claims Financial Overview</span></div>
+        <div class="financial-grid" *ngIf="o.financial.available; else noFinancial">
+          <div class="financial-tile">
+            <div class="financial-label">Total Claim Amount</div>
+            <div class="financial-value">{{ formatCurrency(o.financial.totalClaimValue) }}</div>
+          </div>
+          <div class="financial-tile accent-green">
+            <div class="financial-label">Approved Amount</div>
+            <div class="financial-value">{{ formatCurrency(o.financial.approvedValue) }}</div>
+          </div>
+          <div class="financial-tile accent-amber">
+            <div class="financial-label">Pending Amount</div>
+            <div class="financial-value">{{ formatCurrency(o.financial.pendingValue) }}</div>
+          </div>
+          <div class="financial-tile accent-red">
+            <div class="financial-label">Rejected Amount</div>
+            <div class="financial-value">{{ formatCurrency(o.financial.rejectedValue) }}</div>
+          </div>
+        </div>
+        <ng-template #noFinancial>
+          <div class="empty-note">No financial data available for the selected filters.</div>
+        </ng-template>
+      </div>
+
+      <div class="two-col">
+        <!-- Trend chart (CSS bars -- no chart dependency needed for this data volume) -->
+        <div class="panel">
+          <div class="panel-header"><span>Claims Processing Trend</span></div>
+          <div class="trend-chart" *ngIf="o.trends.length; else noTrend">
+            <div class="trend-bar-group" *ngFor="let t of o.trends">
+              <div class="trend-bar" [style.height]="barHeight(t.submitted)" [title]="t.submitted + ' submitted on ' + t.date"></div>
+              <div class="trend-day">{{ trendDayLabel(t.date) }}</div>
+            </div>
+          </div>
+          <ng-template #noTrend><div class="empty-note">No activity in the selected range.</div></ng-template>
+        </div>
+
+        <!-- Status distribution -->
+        <div class="panel">
+          <div class="panel-header"><span>Claim Status Distribution</span></div>
+          <div class="breakdown">
+            <div class="breakdown-row" *ngFor="let s of o.statusDistribution">
+              <span class="breakdown-label">{{ s.status }}</span>
+              <div class="breakdown-track">
+                <div
+                  class="breakdown-fill"
+                  [class.primary]="s.status === 'Queued'"
+                  [class.amber]="s.status === 'Needs Review'"
+                  [class.green]="s.status === 'Resolved'"
+                  [class.red]="s.status === 'Invalid'"
+                  [style.width.%]="s.percentage"
+                ></div>
+              </div>
+              <span class="breakdown-count">{{ s.count }} ({{ s.percentage }}%)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Insurance provider analytics -->
+        <div class="panel">
+          <div class="panel-header"><span>Top Insurance Providers</span></div>
+          <div class="table-wrap" *ngIf="o.insuranceProviders.length; else noProviders">
+            <table class="data-table">
+              <thead>
+                <tr><th>Provider</th><th>Claims</th><th>Total Value</th><th>Approved</th><th>Pending</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of o.insuranceProviders" (click)="insuranceFilter = p.provider; applyFilters()">
+                  <td>{{ p.provider }}</td>
+                  <td class="num">{{ p.claims }}</td>
+                  <td class="num mono">{{ formatCurrency(p.totalValue) }}</td>
+                  <td class="num">{{ p.approved }}</td>
+                  <td class="num">{{ p.pending }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ng-template #noProviders><div class="empty-note">No insurance company data extracted yet.</div></ng-template>
+        </div>
+
+        <!-- Document + AI quality analytics -->
+        <div class="panel">
+          <div class="panel-header"><span>Document &amp; AI Quality</span></div>
+          <div class="quality-grid">
+            <div class="quality-item"><span class="quality-value">{{ o.documentAnalytics.uploaded }}</span><span class="quality-label">Uploaded</span></div>
+            <div class="quality-item"><span class="quality-value">{{ o.documentAnalytics.ocrRequired }}</span><span class="quality-label">OCR Required</span></div>
+            <div class="quality-item"><span class="quality-value">{{ o.documentAnalytics.ocrCompleted }}</span><span class="quality-label">OCR Completed</span></div>
+            <div class="quality-item"><span class="quality-value">{{ o.quality.mediumConfidenceFields }}</span><span class="quality-label">Medium Confidence Fields</span></div>
+            <div class="quality-item"><span class="quality-value">{{ o.quality.documentsRequiringReview }}</span><span class="quality-label">Docs Requiring Review</span></div>
+            <div class="quality-item"><span class="quality-value">{{ o.quality.validationFailures }}</span><span class="quality-label">Validation Failures</span></div>
+            <div class="quality-item wide"><span class="quality-value">{{ o.quality.sourceMappingSuccessRate }}%</span><span class="quality-label">Source Mapping Success</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Recent activity -->
+        <div class="panel">
+          <div class="panel-header"><span>Recent Claim Activity</span></div>
+          <div class="table-wrap" *ngIf="o.recentActivity.length; else noActivity">
+            <table class="data-table">
+              <thead>
+                <tr><th>Time</th><th>Claim ID</th><th>Patient</th><th>Action</th><th>Status</th><th>User</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let a of o.recentActivity" [routerLink]="['/queue/all', a.claimId]">
+                  <td>{{ relativeTime(a.timestamp) }}</td>
+                  <td class="mono">{{ a.claimId }}</td>
+                  <td>{{ a.patient || "—" }}</td>
+                  <td>{{ a.action }}</td>
+                  <td><span class="status-chip" [class]="a.status">{{ a.status || "—" }}</span></td>
+                  <td>{{ a.user }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ng-template #noActivity><div class="empty-note">No recent activity for the selected filters.</div></ng-template>
+        </div>
+
+        <!-- Attention required -->
+        <div class="panel">
+          <div class="panel-header"><span>Attention Required</span></div>
+          <div class="attention-list" *ngIf="o.attentionRequired.length; else noAttention">
+            <div class="attention-item" *ngFor="let item of o.attentionRequired">
+              <div class="attention-main">
+                <span class="mono">{{ item.claimId }}</span>
+                <span class="attention-reason">{{ item.reason }}</span>
+                <span class="priority-chip" [class]="priorityClass(item.priority)">{{ item.priority }}</span>
+              </div>
+              <div class="attention-meta">
+                <span>{{ relativeTime(item.lastUpdated) }}</span>
+                <a class="btn btn-ghost-dark btn-sm" [routerLink]="['/queue/all', item.claimId]">Review</a>
+              </div>
+            </div>
+          </div>
+          <ng-template #noAttention><div class="empty-note">Nothing needs attention right now.</div></ng-template>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="panel">
+        <div class="panel-header"><span>Quick Actions</span></div>
+        <div class="quick-actions">
+          <a routerLink="/queue/all" class="quick-action">Upload Document</a>
+          <a routerLink="/queue/needs_review" class="quick-action">Review Claims</a>
+          <a routerLink="/queue/queued" class="quick-action">Pending Verification</a>
+          <a routerLink="/queue/invalid" class="quick-action">Invalid Documents</a>
+          <a routerLink="/queue/deleted" class="quick-action">Deleted Claims</a>
+        </div>
+      </div>
+    </ng-container>
+  </ng-container>
+</div>

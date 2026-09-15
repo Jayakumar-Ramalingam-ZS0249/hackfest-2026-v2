@@ -1,17 +1,66 @@
 :root {
-  --color-primary: #1e3a8a;      // deep blue (sidebar, headings)
-  --color-primary-light: #2f5fd6; // active nav / accents
+  /* ===== Clinical command-center palette (blue / white / slate) ===== */
+  /* Deep clinical blue — primary CTA / active-nav / highlights */
+  --color-primary: #1e3a8a;
+  --color-primary-light: #2f5fd6;
   --color-accent-green: #16a34a;  // high confidence
   --color-accent-amber: #d97706;  // needs review
   --color-accent-red: #dc2626;    // errors / delete
   --color-bg: #f5f7fb;
   --color-card: #ffffff;
   --color-border: #e5e9f2;
-  --color-text: #1f2937;
-  --color-text-muted: #6b7280;
+  --color-text: #1e293b;
+  --color-text-muted: #64748b;
   --radius-md: 12px;
   --radius-lg: 20px;
   --shadow-soft: 0 2px 10px rgba(16, 24, 40, 0.06);
+
+  /* Secondary brand color — deeper navy, used for banners/high-emphasis surfaces */
+  --color-navy: #16296b;
+  --color-navy-dark: #0d1a4a;
+
+  /* ===== Full aliased token set — mapped onto the tokens above ===== */
+  --bank-red: var(--color-accent-red);
+  --bank-red-dark: #b91c1c;
+  --bank-red-light: #ef4444;
+  --bank-navy: var(--color-navy);
+  --bank-navy-dark: var(--color-navy-dark);
+  --surface: var(--color-card);
+  --surface-secondary: var(--color-bg);
+  --success: var(--color-accent-green);
+  --warning: var(--color-accent-amber);
+  --danger: var(--color-accent-red);
+}
+
+/* ===== Dark mode — explicitly toggled via [data-theme="dark"] on <html> ===== */
+:root[data-theme="dark"] {
+  --color-primary: #4d7bf3;
+  --color-primary-light: #6d93ff;
+  --color-accent-green: #3ddc84;
+  --color-accent-amber: #f0a83e;
+  --color-accent-red: #ff6b6b;
+  --color-bg: #0b1220;
+  --color-card: #131b2e;
+  --color-border: #263049;
+  --color-text: #e7ebf3;
+  --color-text-muted: #93a0bd;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.35);
+
+  --color-navy: #1c2f6b;
+  --color-navy-dark: #10193f;
+
+  --bank-red: var(--color-accent-red);
+  --bank-red-dark: #ff2f34;
+  --bank-red-light: #ff8f8f;
+  --bank-navy: var(--color-navy);
+  --bank-navy-dark: var(--color-navy-dark);
+  --surface: var(--color-card);
+  --surface-secondary: var(--color-bg);
+  --success: var(--color-accent-green);
+  --warning: var(--color-accent-amber);
+  --danger: var(--color-accent-red);
 }
 
 * {

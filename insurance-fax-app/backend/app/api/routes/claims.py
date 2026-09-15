@@ -10,12 +10,28 @@ there is no duplicated logic.
 
 import time
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
+from ...core.exceptions import AppError
 from ...repositories.claim_repository import claim_repository
 from ...schemas.claim import DecisionPayload
 
 router = APIRouter(tags=["claims"])
+
+# Maps a sidebar/nav filter name to the predicate used to select claims for
+# it. Only filters with a real, honest backing in the data model are
+# supported here -- "Sent" and "Locked" from the original static sidebar
+# mockup have no corresponding concept anywhere in this app (no downstream
+# send integration, no record locking), so they are intentionally not
+# wired up to fake data; see the frontend nav for how they're handled.
+STATUS_FILTERS = {
+    "all": lambda r: not r.get("deleted"),
+    "needs_review": lambda r: not r.get("deleted") and r["status"] == "needs_review",
+    "resolved": lambda r: not r.get("deleted") and r["status"] == "resolved",
+    "invalid": lambda r: not r.get("deleted") and r["status"] == "invalid",
+    "queued": lambda r: not r.get("deleted") and r["status"] == "auto_filled",
+    "deleted": lambda r: bool(r.get("deleted")),
+}
 
 
 def _summary(record: dict) -> dict:
@@ -27,19 +43,55 @@ def _summary(record: dict) -> dict:
         "overall_confidence": record["overall_confidence"],
         "needs_review_count": record["needs_review_count"],
         "matchScore": record.get("document", {}).get("matchScore", 0),
+        "deleted": bool(record.get("deleted")),
+        "patientName": record.get("fields", {}).get("patientName", {}).get("value"),
     }
 
 
 @router.get("/faxes")
 @router.get("/claims")
-def list_claims():
-    return [_summary(r) for r in claim_repository.list_all()]
+def list_claims(status: str = Query("all", description="all | needs_review | resolved | invalid | queued | deleted")):
+    predicate = STATUS_FILTERS.get(status)
+    if predicate is None:
+        raise AppError(f"Unknown status filter '{status}'.", code="INVALID_FILTER", status_code=400)
+    return [_summary(r) for r in claim_repository.list_all(include_deleted=True) if predicate(r)]
 
 
 @router.get("/faxes/{claim_id}")
 @router.get("/claims/{claim_id}")
 def get_claim(claim_id: str):
     return claim_repository.get(claim_id)
+
+
+@router.delete("/faxes/{claim_id}")
+@router.delete("/claims/{claim_id}")
+def delete_claim(claim_id: str):
+    record = claim_repository.get(claim_id)
+    record["deleted"] = True
+    record["deleted_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    claim_repository.update(claim_id, record)
+    claim_repository.append_audit(
+        {"fax_id": claim_id, "claim_id": claim_id, "action": "document_deleted", "timestamp": record["deleted_at"]}
+    )
+    return {"success": True}
+
+
+@router.post("/faxes/{claim_id}/restore")
+@router.post("/claims/{claim_id}/restore")
+def restore_claim(claim_id: str):
+    record = claim_repository.get(claim_id)
+    record["deleted"] = False
+    record.pop("deleted_at", None)
+    claim_repository.update(claim_id, record)
+    claim_repository.append_audit(
+        {
+            "fax_id": claim_id,
+            "claim_id": claim_id,
+            "action": "document_restored",
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+    )
+    return record
 
 
 def _apply_decision(claim_id: str, payload: DecisionPayload) -> dict:

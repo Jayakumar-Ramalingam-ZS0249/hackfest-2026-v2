@@ -8,6 +8,8 @@ google-generativeai==0.8.3
 pytesseract==0.3.13
 pdfplumber==0.11.4
 Pillow==11.0.0
+pyttsx3==2.99
+pywin32==312; sys_platform == "win32"
 
 # testing
 pytest==8.3.3

@@ -68,6 +68,8 @@ export interface FaxRecord {
   aiError?: string | null;
 }
 
+export type QueueFilter = "all" | "needs_review" | "resolved" | "invalid" | "queued" | "deleted";
+
 export interface FaxSummary {
   id: string;
   filename: string;
@@ -76,6 +78,21 @@ export interface FaxSummary {
   overall_confidence: number;
   needs_review_count: number;
   matchScore?: number;
+  deleted?: boolean;
+  patientName?: string | null;
+}
+
+export interface AttentionSummaryItem {
+  claimId: string;
+  filename: string;
+  reason: string;
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  lastUpdated: string;
+}
+
+export interface AttentionSummary {
+  count: number;
+  items: AttentionSummaryItem[];
 }
 
 export interface ChatSource {
@@ -101,6 +118,15 @@ export interface ChatMessageHistory {
   clarificationOptions?: string[];
 }
 
+export interface UploadStatus {
+  stage: string;
+  label: string;
+  percent: number;
+  done: boolean;
+  error: string | null;
+  result: FaxRecord | null;
+}
+
 export interface HealthStatus {
   status: string;
   aiProvider: string;
@@ -112,25 +138,135 @@ export interface DashboardStatistics {
   needsReview: number;
   invalidDocuments: number;
   autoFilled: number;
+  deleted: number;
   averageConfidence: number;
+}
+
+export interface DashboardOverviewFilters {
+  from?: string | null;
+  to?: string | null;
+  status?: string;
+  confidence?: string;
+  insurance?: string;
+}
+
+export interface DashboardFinancial {
+  available: boolean;
+  currency?: string;
+  totalClaimValue?: number;
+  approvedValue?: number;
+  pendingValue?: number;
+  rejectedValue?: number;
+}
+
+export interface StatusDistributionEntry {
+  status: string;
+  count: number;
+  percentage: number;
+}
+
+export interface DocumentAnalytics {
+  uploaded: number;
+  processed: number;
+  ocrRequired: number;
+  ocrCompleted: number;
+  invalid: number;
+}
+
+export interface QualityAnalytics {
+  highConfidenceFields: number;
+  mediumConfidenceFields: number;
+  lowConfidenceFields: number;
+  documentsRequiringReview: number;
+  ocrDocuments: number;
+  validationFailures: number;
+  sourceMappingSuccessRate: number;
+}
+
+export interface InsuranceProviderStat {
+  provider: string;
+  claims: number;
+  totalValue: number;
+  approved: number;
+  pending: number;
+}
+
+export interface TrendPoint {
+  date: string;
+  submitted: number;
+  resolved: number;
+  needsReview: number;
+  invalid: number;
+  queued: number;
+}
+
+export interface RecentActivityEntry {
+  timestamp: string;
+  claimId: string;
+  patient: string | null;
+  action: string;
+  status: string | null;
+  user: string;
+}
+
+export interface AttentionItem {
+  claimId: string;
+  filename: string;
+  reason: string;
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  issueCount: number;
+  lastUpdated: string;
+  matchScore: number;
+}
+
+export interface DashboardOverview {
+  summary: {
+    totalClaims: number;
+    pendingReview: number;
+    queued: number;
+    resolved: number;
+    invalid: number;
+  };
+  financial: DashboardFinancial;
+  statusDistribution: StatusDistributionEntry[];
+  documentAnalytics: DocumentAnalytics;
+  quality: QualityAnalytics;
+  insuranceProviders: InsuranceProviderStat[];
+  trends: TrendPoint[];
+  recentActivity: RecentActivityEntry[];
+  attentionRequired: AttentionItem[];
 }
 
 @Injectable({ providedIn: "root" })
 export class FaxService {
   constructor(private http: HttpClient) {}
 
-  uploadFax(file: File): Observable<FaxRecord> {
-    const formData = new FormData();
-    formData.append("file", file);
-    return this.http.post<FaxRecord>(`${API_BASE}/faxes/upload`, formData);
+  listFaxes(status: QueueFilter = "all"): Observable<FaxSummary[]> {
+    return this.http.get<FaxSummary[]>(`${API_BASE}/faxes`, { params: { status } });
   }
 
-  listFaxes(): Observable<FaxSummary[]> {
-    return this.http.get<FaxSummary[]>(`${API_BASE}/faxes`);
+  /** Starts background processing and returns immediately with a job id --
+   * poll getUploadStatus() for real per-stage progress instead of one long wait. */
+  startUpload(file: File): Observable<{ jobId: string }> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return this.http.post<{ jobId: string }>(`${API_BASE}/faxes/upload-async`, formData);
+  }
+
+  getUploadStatus(jobId: string): Observable<UploadStatus> {
+    return this.http.get<UploadStatus>(`${API_BASE}/faxes/upload-status/${jobId}`);
   }
 
   getFax(id: string): Observable<FaxRecord> {
     return this.http.get<FaxRecord>(`${API_BASE}/faxes/${id}`);
+  }
+
+  deleteClaim(id: string): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(`${API_BASE}/claims/${id}`);
+  }
+
+  restoreClaim(id: string): Observable<FaxRecord> {
+    return this.http.post<FaxRecord>(`${API_BASE}/claims/${id}/restore`, {});
   }
 
   submitDecision(
@@ -175,6 +311,39 @@ export class FaxService {
 
   getDashboardStatistics(): Observable<DashboardStatistics> {
     return this.http.get<DashboardStatistics>(`${API_BASE}/dashboard/statistics`);
+  }
+
+  getDashboardOverview(filters: DashboardOverviewFilters): Observable<{ success: boolean; data: DashboardOverview }> {
+    const params: Record<string, string> = {};
+    if (filters.from) params["from"] = filters.from;
+    if (filters.to) params["to"] = filters.to;
+    if (filters.status) params["status"] = filters.status;
+    if (filters.confidence) params["confidence"] = filters.confidence;
+    if (filters.insurance) params["insurance"] = filters.insurance;
+    return this.http.get<{ success: boolean; data: DashboardOverview }>(`${API_BASE}/dashboard/overview`, { params });
+  }
+
+  getAttentionSummary(): Observable<AttentionSummary> {
+    return this.http.get<AttentionSummary>(`${API_BASE}/dashboard/attention-summary`);
+  }
+
+  getInsuranceProviders(): Observable<string[]> {
+    return this.http.get<string[]>(`${API_BASE}/dashboard/providers`);
+  }
+
+  exportDashboard(filters: DashboardOverviewFilters): Observable<Blob> {
+    const params: Record<string, string> = {};
+    if (filters.from) params["from"] = filters.from;
+    if (filters.to) params["to"] = filters.to;
+    if (filters.status) params["status"] = filters.status;
+    if (filters.confidence) params["confidence"] = filters.confidence;
+    if (filters.insurance) params["insurance"] = filters.insurance;
+    return this.http.get(`${API_BASE}/dashboard/export`, { params, responseType: "blob" });
+  }
+
+  /** Backend TTS -- returns real playable audio bytes for the exact text given. */
+  synthesizeSpeech(text: string): Observable<Blob> {
+    return this.http.post(`${API_BASE}/ai/tts`, { text }, { responseType: "blob" });
   }
 
   getHealth(): Observable<HealthStatus> {

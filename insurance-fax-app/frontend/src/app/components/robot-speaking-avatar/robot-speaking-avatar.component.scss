@@ -1,0 +1,118 @@
+:host {
+  display: inline-block;
+}
+
+.robot {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+.robot.sm {
+  width: 34px;
+  height: 34px;
+}
+
+.robot-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.robot-head {
+  fill: var(--color-primary);
+  stroke: var(--color-navy);
+  stroke-width: 1.5;
+}
+.robot-collar {
+  fill: var(--color-navy);
+  opacity: 0.9;
+}
+.robot-light {
+  fill: var(--color-accent-green);
+}
+.robot-antenna {
+  stroke: var(--color-navy);
+  stroke-width: 2;
+}
+.robot-visor {
+  fill: rgba(255, 255, 255, 0.14);
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1;
+}
+.robot-eye {
+  fill: #ffffff;
+  transform-origin: center;
+  animation: blink 5.5s ease-in-out infinite;
+}
+.eye-right {
+  animation-delay: 0.05s;
+}
+
+.robot-mouth {
+  fill: #ffffff;
+  transition: width 0.09s ease, height 0.09s ease, x 0.09s ease, y 0.09s ease;
+}
+
+.thinking-dots .dot {
+  fill: #ffffff;
+  animation: think-pulse 1.2s ease-in-out infinite;
+}
+.dot-2 {
+  animation-delay: 0.15s;
+}
+.dot-3 {
+  animation-delay: 0.3s;
+}
+
+.robot-status-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--color-card);
+}
+.robot-status-dot.status-idle {
+  background: var(--color-text-muted);
+}
+.robot-status-dot.status-thinking {
+  background: var(--color-accent-amber);
+}
+.robot-status-dot.status-speaking {
+  background: var(--color-accent-green);
+}
+.robot-status-dot.status-paused {
+  background: var(--color-accent-amber);
+}
+.robot-status-dot.status-error {
+  background: var(--color-accent-red);
+}
+
+/* Subtle "alive" cues -- independent of speech, never claimed to be audio-driven */
+@keyframes blink {
+  0%, 92%, 100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.12);
+  }
+}
+
+@keyframes think-pulse {
+  0%, 100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.state-speaking .robot-head {
+  filter: drop-shadow(0 0 6px rgba(47, 95, 214, 0.45));
+}
+.state-error .robot-head {
+  fill: var(--color-text-muted);
+}

@@ -1,0 +1,31 @@
+<div class="robot" [class.sm]="size === 'sm'" [ngClass]="'state-' + state" [attr.aria-label]="'AI Manager: ' + stateLabel" role="img">
+  <svg viewBox="0 0 100 100" class="robot-svg">
+    <!-- head -->
+    <rect x="18" y="16" width="64" height="58" rx="18" class="robot-head" />
+    <!-- antenna / status light -->
+    <circle cx="50" cy="8" r="4" class="robot-light" />
+    <line x1="50" y1="12" x2="50" y2="17" class="robot-antenna" />
+    <!-- visor -->
+    <rect x="28" y="30" width="44" height="16" rx="8" class="robot-visor" />
+    <!-- eyes -->
+    <rect x="35" y="35" width="9" height="7" rx="3" class="robot-eye eye-left" />
+    <rect x="56" y="35" width="9" height="7" rx="3" class="robot-eye eye-right" />
+    <!-- mouth -->
+    <ng-container [ngSwitch]="mouthBucket">
+      <rect *ngSwitchCase="'closed'" x="38" y="57" width="24" height="3" rx="1.5" class="robot-mouth" />
+      <rect *ngSwitchCase="'small'" x="41" y="55" width="18" height="6" rx="3" class="robot-mouth" />
+      <rect *ngSwitchCase="'medium'" x="39" y="53" width="22" height="10" rx="4" class="robot-mouth" />
+      <rect *ngSwitchCase="'open'" x="37" y="51" width="26" height="14" rx="5" class="robot-mouth" />
+      <rect *ngSwitchCase="'wide'" x="34" y="50" width="32" height="17" rx="6" class="robot-mouth" />
+    </ng-container>
+    <!-- thinking dots (only rendered while thinking) -->
+    <g class="thinking-dots" *ngIf="state === 'thinking'">
+      <circle cx="42" cy="58" r="2.6" class="dot dot-1" />
+      <circle cx="50" cy="58" r="2.6" class="dot dot-2" />
+      <circle cx="58" cy="58" r="2.6" class="dot dot-3" />
+    </g>
+    <!-- collar / body hint -->
+    <path d="M22 92 C22 78 34 74 50 74 C66 74 78 78 78 92 Z" class="robot-collar" />
+  </svg>
+  <span class="robot-status-dot" [ngClass]="'status-' + state" *ngIf="size !== 'sm'"></span>
+</div>

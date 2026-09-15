@@ -1,0 +1,77 @@
+<div class="login-shell">
+  <!-- ============ LEFT BRAND PANEL ============ -->
+  <section class="brand-panel">
+    <div class="brand-panel-inner">
+      <div class="brand-mark">
+        <span class="brand-icon">+</span>
+        <span class="brand-name">Medical Command Center</span>
+      </div>
+      <h1 class="brand-heading">Insurance Claim Operations</h1>
+      <p class="brand-tagline">Secure Enterprise Command Center</p>
+      <p class="brand-subtagline">Claims &bull; Documents &bull; Analytics</p>
+
+      <ul class="brand-points">
+        <li>Centralized fax &amp; document intake</li>
+        <li>AI-assisted claim field extraction</li>
+        <li>Real-time queue &amp; review tracking</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ RIGHT LOGIN CARD ============ -->
+  <section class="login-panel">
+    <div class="login-card">
+      <h2 class="login-title">Secure Login</h2>
+      <p class="login-subtitle">Sign in to access the claim operations console.</p>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="field-group">
+          <label for="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="you@company.com"
+            autocomplete="username"
+            [class.invalid]="emailErrorMessage"
+          />
+          <div class="field-error" *ngIf="emailErrorMessage">{{ emailErrorMessage }}</div>
+        </div>
+
+        <div class="field-group">
+          <label for="password">Password</label>
+          <div class="password-input-wrap">
+            <input
+              id="password"
+              [type]="showPassword ? 'text' : 'password'"
+              formControlName="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              [class.invalid]="passwordErrorMessage"
+            />
+            <button
+              type="button"
+              class="toggle-visibility"
+              (click)="togglePasswordVisibility()"
+              [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            >
+              {{ showPassword ? "Hide" : "Show" }}
+            </button>
+          </div>
+          <div class="field-error" *ngIf="passwordErrorMessage">{{ passwordErrorMessage }}</div>
+        </div>
+
+        <div class="form-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+        <button type="submit" class="submit-btn" [disabled]="submitting">
+          {{ submitting ? "Signing in…" : "Login" }}
+        </button>
+
+        <div class="secure-indicator">
+          <span class="secure-dot"></span>
+          Secure connection
+        </div>
+      </form>
+    </div>
+  </section>
+</div>

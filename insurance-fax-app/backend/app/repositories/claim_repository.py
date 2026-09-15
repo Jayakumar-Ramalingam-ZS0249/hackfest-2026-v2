@@ -29,8 +29,14 @@ class ClaimRepository:
     def get_or_none(self, claim_id: str) -> dict | None:
         return self._claims.get(claim_id)
 
-    def list_all(self) -> list[dict]:
-        return list(self._claims.values())
+    def list_all(self, include_deleted: bool = False) -> list[dict]:
+        claims = list(self._claims.values())
+        if include_deleted:
+            return claims
+        return [c for c in claims if not c.get("deleted")]
+
+    def list_deleted(self) -> list[dict]:
+        return [c for c in self._claims.values() if c.get("deleted")]
 
     def update(self, claim_id: str, record: dict) -> dict:
         self._claims[claim_id] = record
@@ -42,8 +48,12 @@ class ClaimRepository:
     def get_audit_log(self, claim_id: str) -> list[dict]:
         return [entry for entry in self._audit_log if entry.get("fax_id") == claim_id or entry.get("claim_id") == claim_id]
 
+    def list_audit_log(self) -> list[dict]:
+        """Every audit entry across every claim, most recent first."""
+        return sorted(self._audit_log, key=lambda e: e.get("timestamp") or "", reverse=True)
+
     def statistics(self) -> dict:
-        claims = self._claims.values()
+        claims = self.list_all()
         total = len(claims)
         by_status = {"resolved": 0, "needs_review": 0, "invalid": 0, "auto_filled": 0}
         confidences = []
@@ -59,6 +69,7 @@ class ClaimRepository:
             "needsReview": by_status.get("needs_review", 0),
             "invalidDocuments": by_status.get("invalid", 0),
             "autoFilled": by_status.get("auto_filled", 0),
+            "deleted": len(self.list_deleted()),
             "averageConfidence": round(sum(confidences) / len(confidences), 1) if confidences else 0,
         }
 

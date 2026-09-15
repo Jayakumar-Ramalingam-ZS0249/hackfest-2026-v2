@@ -1,16 +1,19 @@
 import { Injectable } from "@angular/core";
 
 /**
- * Thin wrapper around the browser's native Web Speech API
- * (SpeechSynthesis for text-to-speech, SpeechRecognition for
- * speech-to-text). Deliberately uses only built-in browser APIs --
- * no external TTS/STT service or API key is involved, so nothing
- * voice-related needs a backend credential.
+ * Thin wrapper around the browser's native SpeechRecognition API for
+ * voice INPUT (speech-to-text) -- no external service or API key
+ * involved. Feature-detected: when unsupported, callers get a clear
+ * `false` from `isRecognitionSupported()` and must fall back to typed
+ * input; this service never throws for "unsupported browser", it just
+ * reports it.
  *
- * Both capabilities are feature-detected. When unsupported, callers
- * get a clear `false` from the `isXSupported()` methods and must fall
- * back to normal text input/output -- this service never throws for
- * "unsupported browser", it just reports it.
+ * Voice OUTPUT (text-to-speech) intentionally does NOT live here.
+ * Browser SpeechSynthesis exposes no underlying audio stream, so it
+ * cannot drive real amplitude-based avatar lip-sync -- see
+ * AudioPlaybackService + the backend /api/ai/tts endpoint, which
+ * produce actual playable audio the AI Manager's robot avatar can
+ * analyse in real time.
  */
 
 // Minimal ambient typing for the non-standardized SpeechRecognition API
@@ -43,39 +46,8 @@ function getSpeechRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
 export class VoiceService {
   private recognition: SpeechRecognitionLike | null = null;
 
-  isSynthesisSupported(): boolean {
-    return typeof window !== "undefined" && "speechSynthesis" in window;
-  }
-
   isRecognitionSupported(): boolean {
     return getSpeechRecognitionCtor() !== null;
-  }
-
-  /** Speaks the given text verbatim -- never a canned/demo sentence, always exactly what's on screen. */
-  speak(text: string, onEnd: () => void, onError?: () => void): void {
-    if (!this.isSynthesisSupported() || !text.trim()) {
-      onError?.();
-      return;
-    }
-    window.speechSynthesis.cancel(); // never overlap with a previous utterance
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1;
-    utterance.onend = () => onEnd();
-    utterance.onerror = () => {
-      onError?.();
-      onEnd();
-    };
-    window.speechSynthesis.speak(utterance);
-  }
-
-  stopSpeaking(): void {
-    if (this.isSynthesisSupported()) {
-      window.speechSynthesis.cancel();
-    }
-  }
-
-  get isSpeaking(): boolean {
-    return this.isSynthesisSupported() && window.speechSynthesis.speaking;
   }
 
   startListening(onResult: (transcript: string) => void, onEnd: () => void, onError?: (message: string) => void): void {

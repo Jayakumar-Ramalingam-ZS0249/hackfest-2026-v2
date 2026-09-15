@@ -10,14 +10,7 @@
   aria-label="Open AI Claim Manager"
   title="Open AI Claim Manager"
 >
-  <span class="ai-avatar" aria-hidden="true">
-    <svg viewBox="0 0 100 100">
-      <circle cx="50" cy="50" r="48" class="avatar-ring" />
-      <circle cx="50" cy="38" r="15" class="avatar-face" />
-      <path d="M20 90 C20 66 34 55 50 55 C66 55 80 66 80 90 Z" class="avatar-body" />
-      <path d="M43 57 L50 68 L57 57 L50 63 Z" class="avatar-tie" />
-    </svg>
-  </span>
+  <app-robot-speaking-avatar [state]="robotState" [audioLevel]="robotAudioLevel" size="md"></app-robot-speaking-avatar>
   <span class="ai-fab-status" [ngClass]="'status-' + aiStatus" aria-hidden="true"></span>
 </button>
 
@@ -30,19 +23,19 @@
   aria-label="AI Claim Manager chat"
 >
   <div class="ai-panel-header" (click)="isMinimized && restore()">
-    <span class="ai-avatar small" aria-hidden="true">
-      <svg viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="48" class="avatar-ring" />
-        <circle cx="50" cy="38" r="15" class="avatar-face" />
-        <path d="M20 90 C20 66 34 55 50 55 C66 55 80 66 80 90 Z" class="avatar-body" />
-      </svg>
-    </span>
+    <app-robot-speaking-avatar
+      class="ai-avatar"
+      [state]="robotState"
+      [audioLevel]="robotAudioLevel"
+      size="sm"
+    ></app-robot-speaking-avatar>
     <div class="ai-panel-title">
       <strong>AI Claim Manager</strong>
       <span class="ai-panel-subtitle">
-        <ng-container *ngIf="isSpeaking">Speaking…</ng-container>
-        <ng-container *ngIf="isListening && !isSpeaking">Listening…</ng-container>
-        <ng-container *ngIf="!isSpeaking && !isListening">
+        <ng-container *ngIf="isSendingChat">Thinking…</ng-container>
+        <ng-container *ngIf="isSpeaking && !isSendingChat">Speaking…</ng-container>
+        <ng-container *ngIf="isListening && !isSpeaking && !isSendingChat">Listening…</ng-container>
+        <ng-container *ngIf="!isSpeaking && !isListening && !isSendingChat">
           {{ claim ? ('Claim ' + claim.id) : 'No claim selected' }}
           <span *ngIf="claim?.filename"> · {{ claim?.filename }}</span>
         </ng-container>
@@ -87,12 +80,29 @@
         </div>
         <div class="chat-thread" *ngFor="let m of chatMessages">
           <div class="chat-bubble chat-user">{{ m.question }}</div>
-          <div class="chat-bubble chat-ai">
+          <div class="chat-bubble chat-ai" [class.currently-speaking]="isSpokenMessage(m.id)">
             {{ m.answer }}
             <div class="chat-sources" *ngIf="m.sources?.length">
               <button class="chat-source-chip" *ngFor="let s of m.sources" (click)="onSourceClick(s)">
                 Source: {{ chatSourceLabel(s) }}
               </button>
+            </div>
+            <div class="chat-voice-row">
+              <button
+                type="button"
+                class="voice-replay-btn"
+                *ngIf="!ttsFailedMessageIds.has(m.id)"
+                [disabled]="isSpokenMessage(m.id)"
+                (click)="replay(m.id, m.answer)"
+                [attr.aria-label]="'Replay response: ' + m.answer"
+                title="Play this response aloud"
+              >
+                🔊 {{ hasCachedAudio(m.id) ? 'Replay' : 'Play' }}
+              </button>
+              <span class="voice-unavailable" *ngIf="ttsFailedMessageIds.has(m.id)">
+                Voice unavailable
+                <button type="button" class="retry-voice-btn" (click)="replay(m.id, m.answer)" aria-label="Retry voice">Retry Voice</button>
+              </span>
             </div>
           </div>
         </div>

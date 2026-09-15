@@ -4,6 +4,8 @@ import { FormsModule } from "@angular/forms";
 
 import { ChatMessageHistory, ChatSource, FaxRecord, FaxService } from "../../services/fax.service";
 import { VoiceService } from "../../services/voice.service";
+import { AudioPlaybackService, PlaybackEvent } from "../../services/audio-playback.service";
+import { RobotSpeakingAvatarComponent, RobotState } from "../robot-speaking-avatar/robot-speaking-avatar.component";
 import { FIELD_LABELS } from "../../shared/field-labels";
 
 export interface SourceRequestedEvent {
@@ -22,7 +24,7 @@ type AiStatus = "checking" | "online" | "offline";
 @Component({
   selector: "app-ai-manager",
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RobotSpeakingAvatarComponent],
   templateUrl: "./ai-manager.component.html",
   styleUrls: ["./ai-manager.component.scss"],
 })
@@ -44,17 +46,31 @@ export class AiManagerComponent implements OnChanges, OnInit, OnDestroy {
   private conversationId: string | undefined;
 
   voiceEnabled = false;
-  isSpeaking = false;
   isListening = false;
-  readonly speechSupported: boolean;
   readonly sttSupported: boolean;
+
+  // Robot avatar state -- driven only by real playback events/amplitude
+  // from AudioPlaybackService, never by a timer of its own.
+  robotState: RobotState = "idle";
+  robotAudioLevel = 0;
+  private currentlySpokenMessageId: string | null = null;
+  private audioCache = new Map<string, Blob>();
+  ttsFailedMessageIds = new Set<string>();
 
   aiStatus: AiStatus = "checking";
   aiProviderLabel = "";
 
-  constructor(private faxService: FaxService, private voiceService: VoiceService) {
-    this.speechSupported = this.voiceService.isSynthesisSupported();
+  constructor(
+    private faxService: FaxService,
+    private voiceService: VoiceService,
+    private audioPlayback: AudioPlaybackService,
+  ) {
     this.sttSupported = this.voiceService.isRecognitionSupported();
+  }
+
+  /** True only while real audio for an AI response is actually playing. */
+  get isSpeaking(): boolean {
+    return this.robotState === "speaking";
   }
 
   ngOnInit(): void {
@@ -62,15 +78,19 @@ export class AiManagerComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.voiceService.stopSpeaking();
+    this.audioPlayback.stop();
     this.voiceService.stopListening();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!changes["claim"]) return;
 
-    this.voiceService.stopSpeaking();
-    this.isSpeaking = false;
+    this.audioPlayback.stop();
+    this.robotState = "idle";
+    this.robotAudioLevel = 0;
+    this.currentlySpokenMessageId = null;
+    this.audioCache.clear();
+    this.ttsFailedMessageIds.clear();
     this.chatMessages = [];
     this.chatError = "";
     this.pendingClarificationOptions = [];
@@ -133,9 +153,11 @@ export class AiManagerComponent implements OnChanges, OnInit, OnDestroy {
   close(): void {
     this.isOpen = false;
     this.isMinimized = false;
-    this.voiceService.stopSpeaking();
+    this.audioPlayback.stop();
     this.voiceService.stopListening();
-    this.isSpeaking = false;
+    this.robotState = "idle";
+    this.robotAudioLevel = 0;
+    this.currentlySpokenMessageId = null;
     this.isListening = false;
   }
 
@@ -165,7 +187,13 @@ export class AiManagerComponent implements OnChanges, OnInit, OnDestroy {
     const message = this.chatInput.trim();
     if (!message || !this.claim || this.isSendingChat) return;
 
+    // Never let a new question overlap with the previous answer's audio.
+    this.audioPlayback.stop();
+    this.currentlySpokenMessageId = null;
+    this.robotAudioLevel = 0;
+
     this.isSendingChat = true;
+    this.robotState = "thinking";
     this.chatError = "";
     this.chatInput = "";
     this.pendingClarificationOptions = [];
@@ -173,10 +201,11 @@ export class AiManagerComponent implements OnChanges, OnInit, OnDestroy {
     this.faxService.sendChatMessage(this.claim.id, message, this.conversationId).subscribe({
       next: (res) => {
         this.conversationId = res.conversationId;
+        const messageId = res.conversationId + "-" + this.chatMessages.length;
         this.chatMessages = [
           ...this.chatMessages,
           {
-            id: res.conversationId + "-" + this.chatMessages.length,
+            id: messageId,
             question: message,
             answer: res.answer,
             sources: res.sources,
@@ -188,39 +217,107 @@ export class AiManagerComponent implements OnChanges, OnInit, OnDestroy {
         this.isSendingChat = false;
 
         if (this.voiceEnabled) {
-          this.speakResponse(res.answer);
+          this.speakMessage(messageId, res.answer);
+        } else {
+          this.robotState = "idle";
         }
       },
       error: () => {
         this.isSendingChat = false;
+        this.robotState = "idle";
         this.chatError = "The AI Claim Manager could not be reached. Please try again.";
       },
     });
   }
 
-  // ---- voice output (TTS) ----
+  // ---- voice output (TTS): backend-synthesized real audio, played through
+  // AudioPlaybackService so the robot's mouth is driven by the ACTUAL audio
+  // signal (see AudioPlaybackService's doc comment for why browser
+  // SpeechSynthesis can't support this). ----
 
   toggleVoice(): void {
     this.voiceEnabled = !this.voiceEnabled;
     if (!this.voiceEnabled) {
-      this.voiceService.stopSpeaking();
-      this.isSpeaking = false;
+      this.audioPlayback.stop();
+      this.robotState = "idle";
+      this.robotAudioLevel = 0;
+      this.currentlySpokenMessageId = null;
     }
   }
 
-  private speakResponse(text: string): void {
-    if (!this.speechSupported) return;
-    this.isSpeaking = true;
-    this.voiceService.speak(
-      text,
-      () => (this.isSpeaking = false),
-      () => (this.isSpeaking = false)
-    );
+  /** Whether this message's audio is cached and ready for instant replay. */
+  hasCachedAudio(messageId: string): boolean {
+    return this.audioCache.has(messageId);
   }
 
+  isSpokenMessage(messageId: string): boolean {
+    return this.currentlySpokenMessageId === messageId;
+  }
+
+  /** User-triggered replay -- reuses cached audio; never re-runs the AI. */
+  replay(messageId: string, text: string): void {
+    this.ttsFailedMessageIds.delete(messageId);
+    this.speakMessage(messageId, text);
+  }
+
+  private speakMessage(messageId: string, text: string): void {
+    const cached = this.audioCache.get(messageId);
+    if (cached) {
+      this.playAudio(messageId, cached);
+      return;
+    }
+
+    this.faxService.synthesizeSpeech(text).subscribe({
+      next: (blob) => {
+        this.audioCache.set(messageId, blob);
+        this.playAudio(messageId, blob);
+      },
+      error: () => {
+        // TTS failing must never hide/undo the already-displayed AI answer.
+        this.ttsFailedMessageIds.add(messageId);
+        this.robotState = "idle";
+      },
+    });
+  }
+
+  private playAudio(messageId: string, blob: Blob): void {
+    this.audioPlayback.play(blob, {
+      onEvent: (event: PlaybackEvent) => this.onPlaybackEvent(messageId, event),
+      onLevel: (level: number) => (this.robotAudioLevel = level),
+    });
+  }
+
+  private onPlaybackEvent(messageId: string, event: PlaybackEvent): void {
+    switch (event) {
+      case "playing":
+        this.robotState = "speaking";
+        this.currentlySpokenMessageId = messageId;
+        break;
+      case "waiting":
+      case "paused":
+        this.robotState = "paused";
+        break;
+      case "ended":
+        this.robotState = "idle";
+        this.robotAudioLevel = 0;
+        this.currentlySpokenMessageId = null;
+        break;
+      case "error":
+        this.robotState = "idle";
+        this.robotAudioLevel = 0;
+        this.currentlySpokenMessageId = null;
+        this.ttsFailedMessageIds.add(messageId);
+        break;
+    }
+  }
+
+  /** User clicked "Stop Speaking" -- stop audio, cancel the analyser loop,
+   * close the mouth, go idle. The AI response text stays visible. */
   stopSpeaking(): void {
-    this.voiceService.stopSpeaking();
-    this.isSpeaking = false;
+    this.audioPlayback.stop();
+    this.robotState = "idle";
+    this.robotAudioLevel = 0;
+    this.currentlySpokenMessageId = null;
   }
 
   // ---- voice input (STT) ----

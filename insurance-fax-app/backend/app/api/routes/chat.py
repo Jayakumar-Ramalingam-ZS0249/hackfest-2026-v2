@@ -50,6 +50,8 @@ def _record_to_extracted_fields(record: dict) -> dict[str, ExtractedField]:
 @router.post("/claims/{claim_id}/chat", response_model=ChatResponse)
 def send_chat_message(claim_id: str, payload: ChatRequest):
     record = claim_repository.get(claim_id)
+    if record.get("deleted"):
+        raise DocumentNotRelevantError("This document has been deleted. Restore it before asking questions about it.")
     if record["status"] == "invalid":
         raise DocumentNotRelevantError("This document was rejected as not relevant and has no analyzed data to chat about.")
 
