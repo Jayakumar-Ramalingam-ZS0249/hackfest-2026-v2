@@ -1,5 +1,4 @@
 <div class="shell">
-
   <!-- ============ TOP HEADER ============ -->
   <header class="header">
     <div class="header-left">
@@ -7,12 +6,27 @@
       <span class="header-title">Medical Command Center</span>
     </div>
     <div class="header-right">
+      <span
+        class="system-status-chip"
+        [title]="backendConnected ? 'Backend connected — AI provider: ' + aiProviderLabel : 'Backend unreachable'"
+      >
+        <span
+          class="status-dot"
+          [style.background]="backendConnected === null ? 'var(--color-accent-amber)' : backendConnected ? 'var(--color-accent-green)' : 'var(--color-accent-red)'"
+        ></span>
+        {{ backendConnected === null ? 'Checking…' : backendConnected ? 'System Online' : 'Offline' }}
+      </span>
+      <span
+        class="help-icon"
+        title="Medical Command Center: upload claim/medical documents, review AI-extracted fields, and ask the AI Claim Manager questions about the selected claim."
+        aria-label="Help"
+        >?</span
+      >
       <span class="admin-name">Clinical Admin</span>
     </div>
   </header>
 
   <div class="body">
-
     <!-- ============ SIDEBAR ============ -->
     <aside class="sidebar">
       <div class="sidebar-brand">
@@ -43,25 +57,34 @@
       </nav>
 
       <div class="sidebar-footer">
-        <div class="status-dot"></div>
+        <div
+          class="status-dot"
+          [style.background]="backendConnected === null ? 'var(--color-accent-amber)' : backendConnected ? 'var(--color-accent-green)' : 'var(--color-accent-red)'"
+        ></div>
         <div>
           <div class="status-title">System Status</div>
-          <div class="status-subtitle">Backend Connected</div>
+          <div class="status-subtitle">
+            {{ backendConnected === null ? 'Checking backend…' : backendConnected ? 'Backend Connected' : 'Backend Unreachable' }}
+            · AI: {{ aiProviderLabel }}
+          </div>
         </div>
       </div>
     </aside>
 
     <!-- ============ MAIN CONTENT ============ -->
     <main class="main">
-
       <!-- Upload bar -->
       <div class="upload-bar">
-        <label class="upload-btn">
+        <label
+          class="upload-btn"
+          title="Upload a medical, insurance, hospital or claim document. The system automatically analyzes it, running OCR if the PDF has no readable text layer."
+        >
           + Upload Fax (PDF)
           <input type="file" accept="application/pdf" (change)="onFileSelected($event)" hidden />
         </label>
         <span *ngIf="isUploading" class="upload-status">Running extraction pipeline…</span>
         <span *ngIf="errorMessage" class="upload-error">{{ errorMessage }}</span>
+        <span class="help-tip" *ngIf="!isUploading && !errorMessage">PDFs only · scanned/faxed pages are OCR'd automatically</span>
       </div>
 
       <!-- Fax queue list -->
@@ -80,88 +103,139 @@
         </div>
       </div>
 
-      <ng-container *ngIf="activeFax">
-
-        <!-- AI Auto-Fill banner -->
-        <div class="ai-banner" [ngClass]="overallBannerClass()">
-          <div class="ai-banner-text">
-            <span class="ai-sparkle">✨</span>
-            <strong>AI Auto-Fill {{ activeFax.status === 'resolved' ? 'Complete' : 'Active' }} — {{ activeFax.overall_confidence }}% Overall Confidence</strong>
-            <div class="ai-banner-sub" *ngIf="activeFax.needs_review_count">
-              {{ activeFax.needs_review_count }} field(s) require manual review before final submission.
-            </div>
-          </div>
-          <div class="ai-banner-actions">
-            <button class="btn btn-ghost" (click)="reRunExtraction()">Re-run Extraction</button>
-            <button class="btn btn-primary" (click)="approveAndResolve()">Approve &amp; Resolve Fax</button>
+      <ng-container *ngIf="activeFax as fax">
+        <!-- ===== Zero/low match: hard rejection ===== -->
+        <div class="validation-modal" *ngIf="fax.document?.status === 'invalid'">
+          <div class="validation-card">
+            <h3>Document Validation Failed</h3>
+            <div class="validation-score">Match Score: {{ fax.document?.matchScore || 0 }}%</div>
+            <p>{{ fax.document?.validationMessage || 'The uploaded document does not contain sufficient claim-related information.' }}</p>
+            <ul class="validation-reasons" *ngIf="fax.document?.reasons?.length">
+              <li *ngFor="let reason of fax.document?.reasons">{{ reason }}</li>
+            </ul>
+            <button class="btn btn-primary" (click)="reRunExtraction()">Upload Another Document</button>
           </div>
         </div>
 
-        <div class="panels">
-
-          <!-- LEFT: Patient information form -->
-          <section class="panel">
-            <div class="panel-header">
-              <span>👤 Patient Information</span>
-              <span class="confidence-chip">{{ activeFax.overall_confidence }}% Confident</span>
+        <!-- ===== Low match: manager must explicitly proceed ===== -->
+        <div class="validation-modal" *ngIf="fax.document?.status === 'review_required' && !reviewAcknowledged">
+          <div class="validation-card review">
+            <h3>Review Required</h3>
+            <div class="validation-score review">Match Score: {{ fax.document?.matchScore || 0 }}%</div>
+            <p>{{ fax.document?.validationMessage || 'This document may be related to the claim, but sufficient information could not be confidently identified.' }}</p>
+            <div class="modal-actions">
+              <button class="btn btn-ghost-dark" (click)="reRunExtraction()">Upload Another Document</button>
+              <button class="btn btn-primary" (click)="proceedWithReview()">Review Anyway</button>
             </div>
-
-            <div class="field-grid">
-              <div class="field" *ngFor="let key of fieldOrder">
-                <label>
-                  {{ fieldLabels[key] }}
-                  <span
-                    class="field-confidence"
-                    [ngClass]="statusClass(activeFax.fields[key].status)"
-                  >
-                    {{ confidencePercent(activeFax.fields[key].confidence) }}
-                    {{ activeFax.fields[key].status === 'auto_fill' ? '✓' : 'Review ⚠' }}
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  [(ngModel)]="activeFax.fields[key].value"
-                  [ngClass]="statusClass(activeFax.fields[key].status)"
-                />
-              </div>
-            </div>
-
-            <div class="eligibility-block">
-              <div class="panel-subheader">Eligibility (auto-populated, read-only)</div>
-              <div class="eligibility-grid">
-                <div><span>Client:</span> {{ activeFax.eligibility.client || '—' }}</div>
-                <div><span>Plan:</span> {{ activeFax.eligibility.plan || '—' }}</div>
-                <div><span>Group No.:</span> {{ activeFax.eligibility.group_no || '—' }}</div>
-                <div><span>Eligibility Status:</span> {{ activeFax.eligibility.eligibility_status }}</div>
-              </div>
-              <div class="eligibility-warning" *ngIf="!activeFax.eligibility.found">
-                ⚠ No eligibility match found for this member number — this fax cannot be auto-resolved.
-              </div>
-            </div>
-          </section>
-
-          <!-- RIGHT: Received document / fax preview -->
-          <section class="panel">
-            <div class="panel-header">
-              <span>📄 Received Document — {{ activeFax.filename }}</span>
-            </div>
-            <div class="fax-preview">
-              <pre>{{ activeFax.raw_text }}</pre>
-            </div>
-            <div class="provenance-strip">
-              Recommendation generated by:
-              <span *ngFor="let p of activeFax.provenance">{{ p.tool }} </span>
-              at {{ activeFax.received_at }}
-            </div>
-          </section>
-
+          </div>
         </div>
+
+        <ng-container *ngIf="fax.document?.status === 'valid' || (fax.document?.status === 'review_required' && reviewAcknowledged)">
+          <div class="ai-banner" [ngClass]="overallBannerClass()">
+            <div class="ai-banner-text">
+              <span class="ai-sparkle">✨</span>
+              <strong>Document Analysis — {{ fax.document?.matchScore || 0 }}% Match Score</strong>
+              <div class="ai-banner-sub">
+                {{ fax.document?.summary || 'No data available' }}
+                <span *ngIf="fax.extractionSource === 'rule_based'" class="ai-fallback-note">
+                  (rule-based extraction — configure AI_API_KEY for AI-powered analysis)
+                </span>
+              </div>
+            </div>
+            <div class="ai-banner-actions">
+              <button class="btn btn-ghost" (click)="reprocessWithAi()">Re-run Extraction</button>
+              <button class="btn btn-primary" (click)="approveAndResolve()">Approve &amp; Resolve Claim</button>
+            </div>
+          </div>
+
+          <div class="panels">
+            <section class="panel">
+              <div class="panel-header">
+                <span>👤 Claim Information</span>
+                <span
+                  class="confidence-chip"
+                  title="Document Relevance Score: how relevant the uploaded document is to the insurance claim workflow. This is separate from each field's own Confidence below."
+                  >{{ fax.document?.matchScore || 0 }}% Document Relevance</span
+                >
+              </div>
+
+              <div class="field-grid">
+                <div class="field" *ngFor="let key of fieldOrder">
+                  <label>
+                    {{ fieldLabels[key] }}
+                    <span
+                      class="field-confidence"
+                      [ngClass]="statusClass(fax.fields[key]?.status || 'not_found')"
+                      title="Confidence: how confidently the system identified this specific field's value."
+                    >
+                      {{ confidencePercent(fax.fields[key]?.confidence || 0) }}
+                      {{ fax.fields[key]?.status === 'auto_fill' ? '✓' : 'Review ⚠' }}
+                    </span>
+                  </label>
+                  <input
+                    [ngModel]="fieldValue(fax.fields[key])"
+                    (ngModelChange)="fax.fields[key].value = $event"
+                    [ngClass]="statusClass(fax.fields[key]?.status || 'not_found')"
+                  />
+                  <div class="field-meta" *ngIf="fax.fields[key]?.value">
+                    <button
+                      class="source-btn"
+                      *ngIf="fax.fields[key]?.sourceText"
+                      (click)="viewSource(fax.fields[key])"
+                      title="Open the original document page used to identify this value."
+                    >
+                      📄 Page {{ fax.fields[key]?.page || '?' }} — View Source
+                    </button>
+                    <span class="badge-conflict" *ngIf="hasConflict(fax.fields[key])">⚠ Conflict Detected</span>
+                    <span class="badge-unverified" *ngIf="isUnverified(fax.fields[key])">⚠ Requires Verification</span>
+                    <span class="badge-verified-manager" *ngIf="fax.fields[key]?.managerVerified">✓ Manager Verified</span>
+                  </div>
+                  <div class="conflict-list" *ngIf="hasConflict(fax.fields[key])">
+                    <div class="conflict-item" *ngFor="let c of fax.fields[key]?.conflicts">
+                      Page {{ c.page }}: {{ c.value }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="eligibility-block">
+                <div class="panel-subheader">Document Summary</div>
+                <div class="summary-box">{{ fax.document?.summary || 'No data available' }}</div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <span>📄 Source Document — {{ fax.filename }}</span>
+                <span
+                  class="ocr-chip"
+                  *ngIf="fax.document?.ocrUsed"
+                  title="OCR automatically reads scanned and image-based pages when normal PDF text extraction is insufficient."
+                  >OCR Applied</span
+                >
+                <span class="ocr-chip" *ngIf="fax.document?.needsOcr && !fax.document?.ocrAvailable" title="This document needs OCR, but the Tesseract OCR engine is not installed on the server.">
+                  ⚠ OCR Unavailable
+                </span>
+              </div>
+              <div class="fax-preview">
+                <pre *ngIf="fax.raw_text; else noRawText"><ng-container *ngIf="activeSourceText">{{ rawTextSegments.before }}<mark id="source-highlight">{{ rawTextSegments.match }}</mark>{{ rawTextSegments.after }}</ng-container><ng-container *ngIf="!activeSourceText">{{ fax.raw_text }}</ng-container></pre>
+                <ng-template #noRawText><pre>No data available</pre></ng-template>
+              </div>
+              <div class="provenance-strip">
+                Extracted by:
+                <span *ngFor="let p of fax.provenance">{{ p.tool }} </span>
+                at {{ fax.received_at }}
+              </div>
+            </section>
+          </div>
+        </ng-container>
       </ng-container>
 
       <div class="empty-state" *ngIf="!activeFax && !faxQueue.length">
         Upload a fax PDF above to run the AI extraction pipeline.
       </div>
-
     </main>
   </div>
 </div>
+
+<app-ai-manager [claim]="activeFax" (sourceRequested)="onAiSourceRequested($event)"></app-ai-manager>

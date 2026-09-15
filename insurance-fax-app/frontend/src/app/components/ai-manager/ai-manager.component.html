@@ -1,0 +1,143 @@
+<!-- Floating manager avatar button -->
+<button
+  type="button"
+  class="ai-fab"
+  [class.speaking]="isSpeaking"
+  [class.listening]="isListening"
+  (click)="togglePanel()"
+  [attr.aria-expanded]="isOpen"
+  aria-haspopup="dialog"
+  aria-label="Open AI Claim Manager"
+  title="Open AI Claim Manager"
+>
+  <span class="ai-avatar" aria-hidden="true">
+    <svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="48" class="avatar-ring" />
+      <circle cx="50" cy="38" r="15" class="avatar-face" />
+      <path d="M20 90 C20 66 34 55 50 55 C66 55 80 66 80 90 Z" class="avatar-body" />
+      <path d="M43 57 L50 68 L57 57 L50 63 Z" class="avatar-tie" />
+    </svg>
+  </span>
+  <span class="ai-fab-status" [ngClass]="'status-' + aiStatus" aria-hidden="true"></span>
+</button>
+
+<!-- Floating chat panel -->
+<div
+  class="ai-panel"
+  *ngIf="isOpen"
+  [class.minimized]="isMinimized"
+  role="dialog"
+  aria-label="AI Claim Manager chat"
+>
+  <div class="ai-panel-header" (click)="isMinimized && restore()">
+    <span class="ai-avatar small" aria-hidden="true">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="48" class="avatar-ring" />
+        <circle cx="50" cy="38" r="15" class="avatar-face" />
+        <path d="M20 90 C20 66 34 55 50 55 C66 55 80 66 80 90 Z" class="avatar-body" />
+      </svg>
+    </span>
+    <div class="ai-panel-title">
+      <strong>AI Claim Manager</strong>
+      <span class="ai-panel-subtitle">
+        <ng-container *ngIf="isSpeaking">Speaking…</ng-container>
+        <ng-container *ngIf="isListening && !isSpeaking">Listening…</ng-container>
+        <ng-container *ngIf="!isSpeaking && !isListening">
+          {{ claim ? ('Claim ' + claim.id) : 'No claim selected' }}
+          <span *ngIf="claim?.filename"> · {{ claim?.filename }}</span>
+        </ng-container>
+      </span>
+    </div>
+    <span class="ai-status-chip" [ngClass]="'status-' + aiStatus">{{ aiStatus === 'online' ? 'Online' : aiStatus === 'checking' ? '…' : 'Offline' }}</span>
+
+    <div class="ai-panel-actions" (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="icon-btn"
+        [class.active]="voiceEnabled"
+        (click)="toggleVoice()"
+        [attr.aria-pressed]="voiceEnabled"
+        [title]="voiceEnabled ? 'Voice responses on' : 'Voice responses off'"
+        aria-label="Toggle voice responses"
+      >
+        {{ voiceEnabled ? '🔊' : '🔈' }}
+      </button>
+      <button type="button" class="icon-btn" (click)="newChat()" title="New Chat" aria-label="Start a new chat">🗑</button>
+      <button type="button" class="icon-btn" (click)="minimize()" title="Minimize" aria-label="Minimize chat">—</button>
+      <button type="button" class="icon-btn" (click)="close()" title="Close" aria-label="Close chat">✕</button>
+    </div>
+  </div>
+
+  <ng-container *ngIf="!isMinimized">
+    <div class="ai-no-claim" *ngIf="!claim">
+      Select or upload a claim document to start a grounded conversation about it.
+    </div>
+
+    <ng-container *ngIf="claim">
+      <div class="quick-actions" *ngIf="quickActions.length">
+        <button class="quick-action-chip" *ngFor="let action of quickActions" (click)="useQuickAction(action)">
+          {{ action }}
+        </button>
+      </div>
+
+      <div class="chat-messages">
+        <div class="chat-empty" *ngIf="!chatMessages.length">
+          Ask a question about this claim — answers are grounded only in the analyzed document, and I'll ask for
+          clarification instead of guessing when a question is ambiguous.
+        </div>
+        <div class="chat-thread" *ngFor="let m of chatMessages">
+          <div class="chat-bubble chat-user">{{ m.question }}</div>
+          <div class="chat-bubble chat-ai">
+            {{ m.answer }}
+            <div class="chat-sources" *ngIf="m.sources?.length">
+              <button class="chat-source-chip" *ngFor="let s of m.sources" (click)="onSourceClick(s)">
+                Source: {{ chatSourceLabel(s) }}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="chat-thread" *ngIf="isSendingChat">
+          <div class="chat-bubble chat-ai chat-typing">Thinking…</div>
+        </div>
+      </div>
+
+      <div class="clarification-row" *ngIf="pendingClarificationOptions.length">
+        <button class="clarification-chip" *ngFor="let opt of pendingClarificationOptions" (click)="useClarificationOption(opt)">
+          {{ opt }}
+        </button>
+      </div>
+
+      <div class="chat-error" *ngIf="chatError">{{ chatError }}</div>
+
+      <div class="speaking-controls" *ngIf="isSpeaking">
+        <span class="speaking-indicator">
+          <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+        </span>
+        <button class="btn-ghost-dark small" (click)="stopSpeaking()">Stop Speaking</button>
+      </div>
+
+      <div class="chat-input-row">
+        <button
+          type="button"
+          class="mic-btn"
+          [class.listening]="isListening"
+          [disabled]="!sttSupported"
+          (click)="toggleListening()"
+          [title]="sttSupported ? 'Ask by voice' : 'Voice input not supported in this browser'"
+          [attr.aria-pressed]="isListening"
+          aria-label="Ask by voice"
+        >
+          🎙
+        </button>
+        <input
+          type="text"
+          placeholder="Ask about this claim..."
+          [(ngModel)]="chatInput"
+          (keydown.enter)="send()"
+          aria-label="Ask the AI Claim Manager a question"
+        />
+        <button class="btn btn-primary" [disabled]="isSendingChat || !chatInput.trim()" (click)="send()">Send</button>
+      </div>
+    </ng-container>
+  </ng-container>
+</div>
