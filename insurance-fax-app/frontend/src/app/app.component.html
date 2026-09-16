@@ -2,6 +2,20 @@
   <!-- ============ TOP HEADER ============ -->
   <header class="header" *ngIf="!isLoginPage">
     <div class="header-left">
+      <button
+        type="button"
+        class="mobile-nav-toggle"
+        (click)="toggleMobileNav($event)"
+        [attr.aria-expanded]="mobileNavOpen"
+        aria-label="Open navigation menu"
+        title="Menu"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
       <span class="header-icon">+</span>
       <span class="header-title">Medical Command Center</span>
     </div>
@@ -40,7 +54,7 @@
           class="status-dot"
           [style.background]="backendConnected === null ? 'var(--color-accent-amber)' : backendConnected ? 'var(--color-accent-green)' : 'var(--color-accent-red)'"
         ></span>
-        {{ backendConnected === null ? 'Checking…' : backendConnected ? 'System Online' : 'Offline' }}
+        <span class="status-text">{{ backendConnected === null ? 'Checking…' : backendConnected ? 'System Online' : 'Offline' }}</span>
       </span>
       <span
         class="help-icon"
@@ -102,7 +116,8 @@
   <div class="body">
     <!-- ============ SIDEBAR ============ -->
     <ng-container *ngIf="!isLoginPage">
-    <aside class="sidebar">
+    <div class="sidebar-backdrop" *ngIf="mobileNavOpen" (click)="closeMobileNav()"></div>
+    <aside class="sidebar" [class.open]="mobileNavOpen">
       <div class="sidebar-brand">
         <span class="brand-badge">CC</span>
         <div>
@@ -112,36 +127,36 @@
       </div>
 
       <nav class="sidebar-nav">
-        <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+        <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="closeMobileNav()">
           <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>
           <span>Dashboard</span>
         </a>
-        <a routerLink="/queue/all" routerLinkActive="active" class="nav-item">
+        <a routerLink="/queue/all" routerLinkActive="active" class="nav-item" (click)="closeMobileNav()">
           <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H8l-4 4V4z"></path></svg>
           <span>Fax Intake</span>
           <span class="badge" *ngIf="stats?.totalClaims">{{ stats?.totalClaims }}</span>
         </a>
-        <a routerLink="/queue/queued" routerLinkActive="active" class="nav-item">
+        <a routerLink="/queue/queued" routerLinkActive="active" class="nav-item" (click)="closeMobileNav()">
           <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 3"></path></svg>
           <span>Queued</span>
           <span class="badge" *ngIf="stats?.autoFilled">{{ stats?.autoFilled }}</span>
         </a>
-        <a routerLink="/queue/needs_review" routerLinkActive="active" class="nav-item">
+        <a routerLink="/queue/needs_review" routerLinkActive="active" class="nav-item" (click)="closeMobileNav()">
           <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20L12 3z"></path><line x1="12" y1="10" x2="12" y2="14"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
           <span>Needs Review</span>
           <span class="badge badge-amber" *ngIf="stats?.needsReview">{{ stats?.needsReview }}</span>
         </a>
-        <a routerLink="/queue/resolved" routerLinkActive="active" class="nav-item">
+        <a routerLink="/queue/resolved" routerLinkActive="active" class="nav-item" (click)="closeMobileNav()">
           <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"></path></svg>
           <span>Resolved</span>
           <span class="badge badge-green" *ngIf="stats?.resolved">{{ stats?.resolved }}</span>
         </a>
-        <a routerLink="/queue/invalid" routerLinkActive="active" class="nav-item">
+        <a routerLink="/queue/invalid" routerLinkActive="active" class="nav-item" (click)="closeMobileNav()">
           <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
           <span>Failed</span>
           <span class="badge" *ngIf="stats?.invalidDocuments">{{ stats?.invalidDocuments }}</span>
         </a>
-        <a routerLink="/queue/deleted" routerLinkActive="active" class="nav-item">
+        <a routerLink="/queue/deleted" routerLinkActive="active" class="nav-item" (click)="closeMobileNav()">
           <svg class="nav-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           <span>Deleted</span>
           <span class="badge" *ngIf="stats?.deleted">{{ stats?.deleted }}</span>

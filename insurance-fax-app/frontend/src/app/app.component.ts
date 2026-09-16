@@ -25,6 +25,10 @@ export class AppComponent implements OnInit {
   userMenuOpen = false;
   isDarkMode = false;
 
+  // Sidebar becomes an off-canvas drawer below 768px (see app.component.scss)
+  // -- this just tracks whether it's currently slid open.
+  mobileNavOpen = false;
+
   // Real global search -- filters the already-fetched claim list by id,
   // filename, or extracted patient name. No backend round-trip per
   // keystroke, and never a fabricated result.
@@ -43,7 +47,10 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     this.checkHealth();
     this.refreshStats();
-    this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => this.refreshStats());
+    this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
+      this.refreshStats();
+      this.mobileNavOpen = false;
+    });
     this.initTheme();
     this.searchInput$.pipe(debounceTime(200)).subscribe((q) => (this.searchQuery = q));
   }
@@ -100,6 +107,15 @@ export class AppComponent implements OnInit {
   goToAttentionItem(claimId: string): void {
     this.notificationsOpen = false;
     this.router.navigate(["/queue/all", claimId]);
+  }
+
+  toggleMobileNav(event: MouseEvent): void {
+    event.stopPropagation();
+    this.mobileNavOpen = !this.mobileNavOpen;
+  }
+
+  closeMobileNav(): void {
+    this.mobileNavOpen = false;
   }
 
   toggleUserMenu(event: MouseEvent): void {
