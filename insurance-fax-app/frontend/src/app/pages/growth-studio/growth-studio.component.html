@@ -1,0 +1,304 @@
+<div class="page">
+  <div class="studio-hero">
+    <div class="studio-hero-text">
+      <span class="studio-eyebrow">Process Modernization</span>
+      <h1>Growth Studio</h1>
+      <p class="page-subtitle">
+        Assess a business process, recommend an agent architecture, simulate it against a real document, and
+        model the ROI and revenue opportunity — all backed by real, auditable calculations.
+      </p>
+    </div>
+    <div class="studio-hero-progress">
+      <div class="studio-hero-progress-label">{{ completedStepCount }} / {{ tabOrder.length }} stages complete</div>
+      <div class="studio-hero-progress-track">
+        <div class="studio-hero-progress-fill" [style.width.%]="(completedStepCount / tabOrder.length) * 100"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline stepper -- doubles as the tab switcher; each step's done/current/
+       pending state is a live read of real data (assessment / simulation /
+       roi / revenue results), never a hardcoded sequence. -->
+  <div class="stepper">
+    <ng-container *ngFor="let tab of tabOrder; let i = index; let last = last">
+      <button
+        type="button"
+        class="stepper-step"
+        [class]="'state-' + stepState(tab)"
+        (click)="setTab(tab)"
+        [attr.aria-current]="activeTab === tab"
+      >
+        <span class="stepper-dot">
+          <span *ngIf="stepState(tab) !== 'done'">{{ i + 1 }}</span>
+          <svg *ngIf="stepState(tab) === 'done'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </span>
+        <span class="stepper-label">{{ tabShortLabels[tab] }}</span>
+      </button>
+      <span class="stepper-connector" *ngIf="!last" [class.filled]="stepState(tab) === 'done'"></span>
+    </ng-container>
+  </div>
+
+  <!-- ================= DISCOVERY ================= -->
+  <section class="panel" *ngIf="activeTab === 'discovery'">
+    <div class="panel-header"><span>Process Discovery</span></div>
+    <p class="panel-hint">Paste or upload a process description. The domain (healthcare, collections, customer
+      service) is detected automatically and gates which agents can ever be recommended.</p>
+
+    <textarea
+      class="process-textarea"
+      rows="8"
+      placeholder="e.g. 1. Fax received with patient demographics and diagnosis. 2. Clinical reviewer checks the diagnosis against policy criteria. 3. Prior authorization decision recorded..."
+      [(ngModel)]="processText"
+    ></textarea>
+
+    <div class="discovery-actions">
+      <label class="upload-btn small">
+        Upload .txt
+        <input type="file" accept=".txt,text/plain" (change)="onProcessFileSelected($event)" hidden />
+      </label>
+      <button class="btn btn-primary" [disabled]="discoveryLoading" (click)="runDiscovery()">
+        {{ discoveryLoading ? "Assessing…" : "Run Discovery Assessment" }}
+      </button>
+    </div>
+
+    <div class="error-banner" *ngIf="discoveryError">{{ discoveryError }}</div>
+
+    <ng-container *ngIf="assessment as a">
+      <div class="result-header">
+        <span class="source-tag" [class.ai]="isAiDrafted">
+          <span class="source-dot"></span>
+          {{ isAiDrafted ? "AI-Drafted Assessment" : "Rule-Based Baseline" }}
+        </span>
+        <span class="source-hint" *ngIf="!isAiDrafted">
+          The AI provider is either not configured or could not be reached right now — every figure below is
+          still computed from your actual input, just without an AI draft on top.
+        </span>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-card">
+          <div class="metric-value">{{ a.human_actors }}</div>
+          <div class="metric-label">Human Actors</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">{{ a.manual_touchpoints }}</div>
+          <div class="metric-label">Manual Touchpoints</div>
+        </div>
+        <div class="metric-card accent-primary score-card">
+          <div class="score-meter">
+            <div class="score-meter-track">
+              <div class="score-meter-fill" [style.width.%]="a.agent_suitability_score"></div>
+            </div>
+            <div class="metric-value">{{ a.agent_suitability_score }}%</div>
+          </div>
+          <div class="metric-label">Agent Suitability Score</div>
+        </div>
+      </div>
+
+      <div class="panel-subheader">Recommended Agents · {{ a.domain | titlecase }} domain</div>
+      <div class="chip-row">
+        <span class="chip chip-green" *ngFor="let agent of a.recommended_agents">{{ agent }}</span>
+      </div>
+      <div class="rejected-note" *ngIf="a.rejected_agents.length">
+        ⚠ Filtered out {{ a.rejected_agents.length }} agent name(s) the AI suggested outside the approved
+        whitelist for this domain: {{ a.rejected_agents.join(', ') }}
+      </div>
+
+      <div class="two-col">
+        <div class="state-block">
+          <div class="panel-subheader">Current State</div>
+          <p>{{ a.current_state }}</p>
+        </div>
+        <div class="state-block">
+          <div class="panel-subheader">Future State</div>
+          <p>{{ a.future_state }}</p>
+        </div>
+      </div>
+    </ng-container>
+  </section>
+
+  <!-- ================= ARCHITECTURE ================= -->
+  <section class="panel" *ngIf="activeTab === 'architecture'">
+    <div class="panel-header"><span>Recommended Architecture</span></div>
+    <p class="panel-hint">
+      This shows the recommended architecture. Implementation runs it against a real document.
+    </p>
+
+    <ng-container *ngIf="assessment as a; else noAssessment">
+      <div class="flow-diagram">
+        <ng-container *ngFor="let agent of a.recommended_agents; let last = last">
+          <div class="flow-box">{{ agent }}</div>
+          <div class="flow-arrow" *ngIf="!last">→</div>
+        </ng-container>
+      </div>
+
+      <div class="panel-subheader">Roadmap</div>
+      <ol class="roadmap-list">
+        <li *ngFor="let step of a.roadmap">{{ step }}</li>
+      </ol>
+    </ng-container>
+    <ng-template #noAssessment>
+      <div class="empty-state">
+        <div class="empty-state-icon">◇</div>
+        <div class="empty-state-title">No architecture yet</div>
+        <p class="empty-state-text">Run a Discovery assessment first to see its recommended architecture here.</p>
+        <button class="btn btn-ghost-dark" (click)="setTab('discovery')">Go to Discovery →</button>
+      </div>
+    </ng-template>
+  </section>
+
+  <!-- ================= IMPLEMENTATION ================= -->
+  <section class="panel" *ngIf="activeTab === 'implementation'">
+    <div class="panel-header"><span>Implementation — Agent Simulation</span></div>
+    <p class="panel-hint">
+      Runs the Discovery-recommended agents against a real, already-processed fax. This never re-runs OCR —
+      it reuses the exact extraction already produced by
+      <a routerLink="/queue/all">Fax Intake</a>.
+    </p>
+
+    <div class="error-banner" *ngIf="faxLoadError">{{ faxLoadError }}</div>
+
+    <label class="field-label" for="fax-select">Select a processed fax</label>
+    <select id="fax-select" class="fax-select" [ngModel]="selectedFaxId" (ngModelChange)="onSelectFax($event)">
+      <option value="">— Choose a fax —</option>
+      <option *ngFor="let f of faxOptions" [value]="f.id">{{ f.filename }} ({{ f.status }})</option>
+    </select>
+
+    <div class="selected-fax-summary" *ngIf="selectedFax as fax">
+      <span>Patient: {{ fax.fields['patientName']?.value || 'Not found' }}</span>
+      <span>Confidence: {{ fax.overall_confidence }}%</span>
+      <a class="view-link" [routerLink]="['/queue', 'all', fax.id]">View full record →</a>
+    </div>
+
+    <div class="no-assessment-note" *ngIf="!assessment">
+      ⚠ Run a Discovery assessment on the Discovery tab first — the simulation needs to know which agents to run.
+    </div>
+
+    <button class="btn btn-primary" [disabled]="!canRunSimulation" (click)="runSimulation()">
+      {{ simulationLoading ? "Simulating…" : "Run Agent Simulation" }}
+    </button>
+
+    <div class="error-banner" *ngIf="simulationError">{{ simulationError }}</div>
+
+    <ng-container *ngIf="simulationResult as r">
+      <div class="final-status-row" [ngClass]="statusBadgeClass(r.final_status)">
+        <span class="final-status-label">Final Status</span>
+        <span class="badge" [ngClass]="statusBadgeClass(r.final_status)">{{ r.final_status }}</span>
+        <span class="skipped-note" *ngIf="r.skipped_ai_call">⚡ AI call skipped — confidence too low</span>
+      </div>
+
+      <div class="agent-card-grid">
+        <div class="agent-card" *ngFor="let agent of r.agents">
+          <div class="agent-card-name">{{ agent.name }}</div>
+          <div class="agent-card-output">{{ agent.output }}</div>
+          <div class="agent-card-reasoning">{{ agent.reasoning }}</div>
+        </div>
+        <div class="agent-card policy" [class.flagged]="r.policy_agent.exception_flagged">
+          <div class="agent-card-name">Policy Agent</div>
+          <div class="agent-card-output" *ngIf="r.policy_agent.exception_flagged">
+            ⚠ Exception flagged: {{ r.policy_agent.reason }}
+          </div>
+          <div class="agent-card-output" *ngIf="!r.policy_agent.exception_flagged">No exceptions found.</div>
+          <div class="agent-card-reasoning">{{ r.policy_agent.reasoning }}</div>
+        </div>
+      </div>
+    </ng-container>
+  </section>
+
+  <!-- ================= BUSINESS IMPACT (ROI) ================= -->
+  <section class="panel" *ngIf="activeTab === 'impact'">
+    <div class="panel-header"><span>Business Impact — ROI Calculator</span></div>
+
+    <div class="roi-form">
+      <label class="field-label">Annual Volume
+        <input type="number" [(ngModel)]="roiForm.annual_volume" min="0" />
+      </label>
+      <label class="field-label">Minutes per Request
+        <input type="number" [(ngModel)]="roiForm.mins_per_request" min="0" />
+      </label>
+      <label class="field-label">Automation %
+        <input type="number" [(ngModel)]="roiForm.automation_pct" min="0" max="1" step="0.05" />
+      </label>
+      <label class="field-label">Cost per Hour
+        <input type="number" [(ngModel)]="roiForm.cost_per_hour" min="0" />
+      </label>
+    </div>
+
+    <button class="btn btn-primary" [disabled]="roiLoading" (click)="calculateRoi()">
+      {{ roiLoading ? "Calculating…" : "Calculate" }}
+    </button>
+
+    <div class="error-banner" *ngIf="roiError">{{ roiError }}</div>
+
+    <div class="metric-row" *ngIf="roiResult as r">
+      <div class="metric-card">
+        <div class="metric-value">{{ r.current_hours | number: '1.0-0' }}</div>
+        <div class="metric-label">Current Hours</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">{{ r.future_hours | number: '1.0-0' }}</div>
+        <div class="metric-label">Future Hours</div>
+      </div>
+      <div class="metric-card accent-green">
+        <div class="metric-value">{{ r.saved_hours | number: '1.0-0' }}</div>
+        <div class="metric-label">Hours Saved</div>
+      </div>
+      <div class="metric-card accent-primary">
+        <div class="metric-value">{{ formatCurrency(r.annual_savings) }}</div>
+        <div class="metric-label">Annual Savings</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= REVENUE ================= -->
+  <section class="panel" *ngIf="activeTab === 'revenue'">
+    <div class="panel-header">
+      <span>Revenue Opportunity</span>
+      <button class="btn btn-ghost-dark small" (click)="toggleRevenueEditable()">
+        {{ revenueEditable ? "Use Discovery values" : "Edit values" }}
+      </button>
+    </div>
+    <p class="panel-hint" *ngIf="!revenueEditable">
+      Touchpoints and agent count are auto-populated from the current Discovery assessment.
+    </p>
+
+    <div class="roi-form">
+      <label class="field-label">Touchpoints
+        <input type="number" [(ngModel)]="revenueForm.touchpoints" min="0" [disabled]="!revenueEditable" />
+      </label>
+      <label class="field-label">Agent Count
+        <input type="number" [(ngModel)]="revenueForm.agent_count" min="0" [disabled]="!revenueEditable" />
+      </label>
+      <label class="field-label">Domain
+        <select [(ngModel)]="revenueForm.domain" [disabled]="!revenueEditable">
+          <option value="general">General</option>
+          <option value="healthcare">Healthcare</option>
+          <option value="collections">Collections</option>
+          <option value="customer_service">Customer Service</option>
+        </select>
+      </label>
+    </div>
+
+    <button class="btn btn-primary" [disabled]="revenueLoading" (click)="calculateRevenue()">
+      {{ revenueLoading ? "Calculating…" : "Calculate Opportunity" }}
+    </button>
+
+    <div class="error-banner" *ngIf="revenueError">{{ revenueError }}</div>
+
+    <ng-container *ngIf="revenueResult as r">
+      <div class="total-opportunity">
+        <div class="total-label">Total Initial Opportunity</div>
+        <div class="total-value">{{ formatCurrency(r.total) }}</div>
+      </div>
+      <table class="revenue-table">
+        <tbody>
+          <tr><td>Discovery Assessment</td><td class="num">{{ formatCurrency(r.assessment) }}</td></tr>
+          <tr><td>Architecture Advisory</td><td class="num">{{ formatCurrency(r.architecture) }}</td></tr>
+          <tr><td>Implementation Program</td><td class="num">{{ formatCurrency(r.implementation) }}</td></tr>
+          <tr><td>Governance</td><td class="num">{{ formatCurrency(r.governance) }}</td></tr>
+          <tr class="managed-row"><td>Managed Services (Annual)</td><td class="num">{{ formatCurrency(r.managed) }}</td></tr>
+        </tbody>
+      </table>
+    </ng-container>
+  </section>
+</div>

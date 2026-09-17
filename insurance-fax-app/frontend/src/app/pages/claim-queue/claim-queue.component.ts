@@ -37,6 +37,8 @@ export class ClaimQueueComponent implements OnInit, OnDestroy {
   activeFax: FaxRecord | null = null;
   isUploading = false;
   errorMessage = "";
+  successMessage = "";
+  isApproving = false;
 
   // Real upload progress -- stage/percent come straight from the backend
   // pipeline (see UploadStatus), never simulated on a timer.
@@ -204,14 +206,34 @@ export class ClaimQueueComponent implements OnInit, OnDestroy {
   }
 
   approveAndResolve(): void {
-    if (!this.activeFax) return;
+    if (!this.activeFax || this.isApproving) return;
+    if (!confirm("Approve and resolve this claim? All current field values will be saved as final.")) return;
+
+    const faxId = this.activeFax.id;
     const corrections: Record<string, string> = {};
     for (const key of this.fieldOrder) {
       corrections[key] = this.activeFax.fields[key]?.value ?? "";
     }
-    this.faxService.submitDecision(this.activeFax.id, true, corrections, "clinical_admin").subscribe((record) => {
-      this.activeFax = record;
-      this.refreshQueue();
+
+    this.isApproving = true;
+    this.errorMessage = "";
+    this.successMessage = "";
+
+    this.faxService.submitDecision(faxId, true, corrections, "clinical_admin").subscribe({
+      next: (record) => {
+        this.isApproving = false;
+        this.activeFax = record;
+        this.successMessage = "Claim approved and resolved — saved successfully.";
+        this.refreshQueue();
+        // Jump to the Resolved view so the manager can see the claim actually
+        // landed there, instead of leaving them looking at an unchanged screen.
+        this.router.navigate(["/queue", "resolved", faxId]);
+        setTimeout(() => (this.successMessage = ""), 5000);
+      },
+      error: () => {
+        this.isApproving = false;
+        this.errorMessage = "Could not approve this claim. Please check the backend connection and try again.";
+      },
     });
   }
 

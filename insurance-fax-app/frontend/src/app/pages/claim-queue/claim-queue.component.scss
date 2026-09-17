@@ -36,6 +36,17 @@
   color: var(--color-accent-red);
   font-size: 13px;
 }
+
+.success-banner {
+  background: #ecfdf3;
+  color: var(--color-accent-green);
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
 .help-tip {
   color: var(--color-text-muted);
   font-size: 12px;

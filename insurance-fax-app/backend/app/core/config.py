@@ -23,7 +23,11 @@ class Settings(BaseSettings):
     # rule-based extractor so the app keeps working with zero external
     # dependencies, exactly like the original MVP.
     ai_provider: str = "gemini"
-    ai_model: str = "gemini-2.5-flash"
+    # "gemini-flash-latest" is a Google-maintained alias for the current
+    # recommended flash model, not a dated snapshot -- pinning to a specific
+    # dated model name (e.g. "gemini-2.5-flash") breaks once Google retires
+    # it for new API keys/projects, which is exactly what happened here.
+    ai_model: str = "gemini-flash-latest"
     ai_api_key: str = ""
 
     # --- Uploads ---

@@ -112,3 +112,7 @@ class GeminiProvider(AIProvider):
             source_page=data.get("sourcePage"),
             source_text=data.get("sourceText"),
         )
+
+    def generate_json(self, prompt: str, system_prompt: str = "") -> dict:
+        full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+        return self._generate_json(full_prompt[:60000])

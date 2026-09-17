@@ -17,6 +17,8 @@
     <span class="help-tip" *ngIf="!isUploading && !errorMessage">PDFs only · scanned/faxed pages are OCR'd automatically</span>
   </div>
 
+  <div class="success-banner" *ngIf="successMessage" role="status">✓ {{ successMessage }}</div>
+
   <div class="scan-progress" *ngIf="isUploading" role="status" aria-live="polite">
     <div class="scan-progress-header">
       <span class="scan-dot"></span>
@@ -115,9 +117,11 @@
           </div>
         </div>
         <div class="ai-banner-actions">
-          <button class="btn btn-ghost" (click)="reprocessWithAi()">Re-run Extraction</button>
-          <button class="btn btn-primary" (click)="approveAndResolve()">Approve &amp; Resolve Claim</button>
-          <button class="btn btn-ghost" (click)="deleteFax(fax.id, $event)">Delete</button>
+          <button class="btn btn-ghost" [disabled]="isApproving" (click)="reprocessWithAi()">Re-run Extraction</button>
+          <button class="btn btn-primary" [disabled]="isApproving || fax.status === 'resolved'" (click)="approveAndResolve()">
+            {{ isApproving ? "Saving…" : fax.status === "resolved" ? "✓ Resolved" : "Approve & Resolve Claim" }}
+          </button>
+          <button class="btn btn-ghost" [disabled]="isApproving" (click)="deleteFax(fax.id, $event)">Delete</button>
         </div>
       </div>
 

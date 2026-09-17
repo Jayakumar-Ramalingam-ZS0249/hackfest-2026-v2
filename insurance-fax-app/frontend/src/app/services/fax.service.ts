@@ -118,6 +118,74 @@ export interface ChatMessageHistory {
   clarificationOptions?: string[];
 }
 
+export interface DiscoveryAssessment {
+  id: string;
+  process_name: string;
+  domain: string;
+  whitelist: string[];
+  human_actors: number;
+  manual_touchpoints: number;
+  agent_suitability_score: number;
+  recommended_agents: string[];
+  rejected_agents: string[];
+  current_state: string;
+  future_state: string;
+  roadmap: string[];
+  assessment_source: string;
+}
+
+export interface AgentOutput {
+  name: string;
+  output: string;
+  reasoning: string;
+}
+
+export interface PolicyAgentResult {
+  exception_flagged: boolean;
+  reason: string;
+  reasoning: string;
+}
+
+export interface AgentSimulationResult {
+  agents: AgentOutput[];
+  policy_agent: PolicyAgentResult;
+  final_status: string;
+  skipped_ai_call: boolean;
+  reasoning_per_agent: Record<string, string>;
+  fax_id: string;
+  assessment_id: string;
+}
+
+export interface RoiRequest {
+  annual_volume: number;
+  mins_per_request: number;
+  automation_pct: number;
+  cost_per_hour: number;
+}
+
+export interface RoiResult {
+  current_hours: number;
+  future_hours: number;
+  saved_hours: number;
+  annual_savings: number;
+}
+
+export interface RevenueRequest {
+  touchpoints: number;
+  agent_count: number;
+  domain: string;
+}
+
+export interface RevenueResult {
+  assessment: number;
+  architecture: number;
+  implementation: number;
+  governance: number;
+  managed: number;
+  total: number;
+  domain: string;
+}
+
 export interface UploadStatus {
   stage: string;
   label: string;
@@ -339,6 +407,31 @@ export class FaxService {
     if (filters.confidence) params["confidence"] = filters.confidence;
     if (filters.insurance) params["insurance"] = filters.insurance;
     return this.http.get(`${API_BASE}/dashboard/export`, { params, responseType: "blob" });
+  }
+
+  // ---- Growth Studio: Discovery / Implementation simulation / ROI / Revenue ----
+
+  runDiscoveryAssessment(processText: string): Observable<DiscoveryAssessment> {
+    return this.http.post<DiscoveryAssessment>(`${API_BASE}/discovery/assess`, { process_text: processText });
+  }
+
+  getDiscoveryAssessment(assessmentId: string): Observable<DiscoveryAssessment> {
+    return this.http.get<DiscoveryAssessment>(`${API_BASE}/discovery/${assessmentId}`);
+  }
+
+  runAgentSimulation(faxId: string, assessmentId: string): Observable<AgentSimulationResult> {
+    return this.http.post<AgentSimulationResult>(`${API_BASE}/implementation/simulate`, {
+      fax_id: faxId,
+      assessment_id: assessmentId,
+    });
+  }
+
+  calculateRoi(payload: RoiRequest): Observable<RoiResult> {
+    return this.http.post<RoiResult>(`${API_BASE}/roi/calculate`, payload);
+  }
+
+  calculateRevenue(payload: RevenueRequest): Observable<RevenueResult> {
+    return this.http.post<RevenueResult>(`${API_BASE}/revenue/calculate`, payload);
   }
 
   /** Backend TTS -- returns real playable audio bytes for the exact text given. */

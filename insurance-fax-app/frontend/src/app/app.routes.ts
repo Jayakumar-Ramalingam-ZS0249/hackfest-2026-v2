@@ -15,6 +15,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: "growth-studio",
+    loadComponent: () => import("./pages/growth-studio/growth-studio.component").then((m) => m.GrowthStudioComponent),
+    canActivate: [authGuard],
+  },
+  {
     path: "queue/:filter",
     loadComponent: () => import("./pages/claim-queue/claim-queue.component").then((m) => m.ClaimQueueComponent),
     canActivate: [authGuard],

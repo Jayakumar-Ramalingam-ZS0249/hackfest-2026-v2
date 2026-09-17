@@ -45,3 +45,15 @@ class AIProvider(ABC):
 
     def chat(self, question: str, context: str, system_prompt: str) -> AIChatResult:
         raise NotImplementedError(f"{self.name} does not support chat")
+
+    def generate_json(self, prompt: str, system_prompt: str = "") -> dict:
+        """Generic structured-JSON drafting for features beyond field
+        extraction/chat (discovery assessments, agent-simulation drafts).
+
+        Callers must NEVER trust this output for a compliance-relevant
+        decision without an independent code-level check -- see
+        agents/discovery.py's whitelist filter and
+        agents/implementation.py's exception-flag overrides for the
+        enforcement side of that rule. The LLM only drafts; code decides.
+        """
+        raise NotImplementedError(f"{self.name} does not support generate_json")

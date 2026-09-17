@@ -4,6 +4,7 @@ import fitz
 import pytest
 from fastapi.testclient import TestClient
 
+from app.agents.orchestrator import run_pipeline
 from app.main import app
 
 
@@ -55,10 +56,6 @@ def test_async_upload_reports_real_stage_progress_and_completes(client):
     assert status["result"]["fields"]["patientName"]["value"] == "Progress Test"
     assert status["percent"] == 100
 
-    # Real, distinct pipeline stages were actually reported -- not a single jump.
-    distinct_stages = set(status["_seen_stages"])
-    assert len(distinct_stages) >= 2
-
     # The claim must also be retrievable through the normal claim endpoints.
     claim_id = status["result"]["id"]
     r = client.get(f"/api/claims/{claim_id}")
@@ -68,3 +65,24 @@ def test_async_upload_reports_real_stage_progress_and_completes(client):
 def test_unknown_upload_job_returns_404(client):
     r = client.get("/api/documents/upload-status/does-not-exist")
     assert r.status_code == 404
+
+
+def test_run_pipeline_reports_multiple_distinct_progress_stages():
+    # Verified directly against the progress callback rather than by polling
+    # the async job over HTTP: with the deterministic rule-based provider the
+    # whole pipeline can finish in well under a polling interval, so wall-clock
+    # polling can legitimately observe only the final "done" state even though
+    # every intermediate stage really was reported. Calling run_pipeline
+    # in-process and recording every callback invocation is deterministic and
+    # has no such race.
+    seen: list[tuple[str, str, int]] = []
+    run_pipeline(make_pdf(VALID_CLAIM_TEXT), "progress.pdf", on_progress=lambda stage, label, percent: seen.append((stage, label, percent)))
+
+    distinct_stages = {stage for stage, _label, _percent in seen}
+    assert len(distinct_stages) >= 4, f"expected several distinct pipeline stages, got: {seen}"
+    # Percent should be non-decreasing and finish at 100.
+    percents = [p for _s, _l, p in seen]
+    assert percents == sorted(percents)
+    # run_pipeline itself reports up to "finalizing" (97) -- the caller
+    # (the async job wrapper) is what bumps to 100 once the record is stored.
+    assert percents[-1] == 97
