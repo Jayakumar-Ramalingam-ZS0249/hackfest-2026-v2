@@ -1,12 +1,17 @@
 :root {
-  /* ===== Clinical command-center palette (blue / white / slate) ===== */
-  /* Deep clinical blue — primary CTA / active-nav / highlights */
-  --color-primary: #1e3a8a;
-  --color-primary-light: #2f5fd6;
+  /* ===== Zuci brand palette (blue / gold / white) =====
+     Primary blue and accent gold are sampled directly from the Zuci
+     logo (frontend/src/assets/branding/zuci-logo.png): blue rgb(16,131,197),
+     gold rgb(252,195,0). Status colors (green/amber/red) stay semantically
+     distinct from the brand accent so "needs review" amber is never
+     visually confused with the brand-gold decorative accent. */
+  --color-primary: #1083c5;
+  --color-primary-light: #4fa8de;
+  --color-brand-gold: #fcc300;
   --color-accent-green: #16a34a;  // high confidence
   --color-accent-amber: #d97706;  // needs review
   --color-accent-red: #dc2626;    // errors / delete
-  --color-bg: #f5f7fb;
+  --color-bg: #f5f8fb;
   --color-card: #ffffff;
   --color-border: #e5e9f2;
   --color-text: #1e293b;
@@ -15,9 +20,9 @@
   --radius-lg: 20px;
   --shadow-soft: 0 2px 10px rgba(16, 24, 40, 0.06);
 
-  /* Secondary brand color — deeper navy, used for banners/high-emphasis surfaces */
-  --color-navy: #16296b;
-  --color-navy-dark: #0d1a4a;
+  /* Deep blue derived from the brand blue — banners/high-emphasis surfaces */
+  --color-navy: #0b4a6f;
+  --color-navy-dark: #063049;
 
   /* ===== Full aliased token set — mapped onto the tokens above ===== */
   --bank-red: var(--color-accent-red);
@@ -34,8 +39,9 @@
 
 /* ===== Dark mode — explicitly toggled via [data-theme="dark"] on <html> ===== */
 :root[data-theme="dark"] {
-  --color-primary: #4d7bf3;
-  --color-primary-light: #6d93ff;
+  --color-primary: #3aa9e8;
+  --color-primary-light: #6fc3f0;
+  --color-brand-gold: #ffd23d;
   --color-accent-green: #3ddc84;
   --color-accent-amber: #f0a83e;
   --color-accent-red: #ff6b6b;
@@ -48,8 +54,8 @@
   --radius-lg: 20px;
   --shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.35);
 
-  --color-navy: #1c2f6b;
-  --color-navy-dark: #10193f;
+  --color-navy: #123b57;
+  --color-navy-dark: #0a2536;
 
   --bank-red: var(--color-accent-red);
   --bank-red-dark: #ff2f34;

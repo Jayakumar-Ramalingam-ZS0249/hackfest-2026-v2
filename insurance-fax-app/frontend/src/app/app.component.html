@@ -1,6 +1,6 @@
 <div class="shell">
   <!-- ============ TOP HEADER ============ -->
-  <header class="header" *ngIf="!isLoginPage">
+  <header class="header" *ngIf="!hideShell">
     <div class="header-left">
       <button
         type="button"
@@ -16,8 +16,8 @@
           <line x1="3" y1="18" x2="21" y2="18"></line>
         </svg>
       </button>
-      <span class="header-icon">+</span>
-      <span class="header-title">Medical Command Center</span>
+      <img class="header-icon" src="assets/branding/zuci-flame.png" alt="Zuci" />
+      <span class="header-title">Zuci Agent Services</span>
     </div>
 
     <div class="header-search" (click)="$event.stopPropagation()">
@@ -58,7 +58,7 @@
       </span>
       <span
         class="help-icon"
-        title="Medical Command Center: upload claim/medical documents, review AI-extracted fields, and ask the AI Claim Manager questions about the selected claim."
+        title="Zuci Agent Services: upload claim/medical documents, review AI-extracted fields, and ask the AI Claim Manager questions about the selected claim."
         aria-label="Help"
         >?</span
       >
@@ -115,14 +115,14 @@
 
   <div class="body">
     <!-- ============ SIDEBAR ============ -->
-    <ng-container *ngIf="!isLoginPage">
+    <ng-container *ngIf="!hideShell">
     <div class="sidebar-backdrop" *ngIf="mobileNavOpen" (click)="closeMobileNav()"></div>
     <aside class="sidebar" [class.open]="mobileNavOpen">
       <div class="sidebar-brand">
-        <span class="brand-badge">CC</span>
+        <img class="brand-badge" src="assets/branding/zuci-flame.png" alt="Zuci" />
         <div>
-          <div class="brand-title">Command Center</div>
-          <div class="brand-subtitle">Automation Plan</div>
+          <div class="brand-title">Agent Services</div>
+          <div class="brand-subtitle">Transformation Platform</div>
         </div>
       </div>
 
@@ -184,7 +184,7 @@
     </ng-container>
 
     <!-- ============ ROUTED PAGE CONTENT ============ -->
-    <main class="main" [class.main-full]="isLoginPage">
+    <main class="main" [class.main-full]="hideShell">
       <router-outlet></router-outlet>
     </main>
   </div>

@@ -1,0 +1,113 @@
+:host {
+  display: block;
+  height: 100vh;
+}
+
+.landing-shell {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #ffffff 0%, #eaf4fb 100%);
+  padding: 24px;
+}
+
+.landing-card {
+  max-width: 560px;
+  width: 100%;
+  text-align: center;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-top: 4px solid var(--color-brand-gold);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 40px rgba(16, 24, 40, 0.08);
+  padding: 48px 40px;
+}
+
+.landing-logo {
+  height: 64px;
+  width: auto;
+  margin-bottom: 28px;
+}
+
+.landing-eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 4px 14px;
+  margin-bottom: 16px;
+}
+
+.landing-title {
+  margin: 0 0 12px;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-navy);
+  letter-spacing: -0.01em;
+}
+
+.landing-subtitle {
+  margin: 0 0 24px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.landing-points {
+  list-style: none;
+  margin: 0 0 32px;
+  padding: 0;
+  text-align: left;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.landing-points li {
+  font-size: 13.5px;
+  color: var(--color-text);
+  padding-left: 20px;
+  position: relative;
+}
+
+.landing-points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+
+.landing-cta {
+  display: inline-block;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+  padding: 13px 32px;
+  border-radius: 999px;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.landing-cta:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 480px) {
+  .landing-card {
+    padding: 36px 24px;
+  }
+  .landing-title {
+    font-size: 26px;
+  }
+}

@@ -3,7 +3,11 @@ import { Routes } from "@angular/router";
 import { authGuard, guestGuard } from "./guards/auth.guard";
 
 export const routes: Routes = [
-  { path: "", pathMatch: "full", redirectTo: "dashboard" },
+  {
+    path: "",
+    pathMatch: "full",
+    loadComponent: () => import("./pages/landing/landing.component").then((m) => m.LandingComponent),
+  },
   {
     path: "login",
     loadComponent: () => import("./pages/login/login.component").then((m) => m.LoginComponent),

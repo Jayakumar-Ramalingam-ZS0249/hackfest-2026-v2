@@ -80,11 +80,20 @@ export class AppComponent implements OnInit {
       .slice(0, 8);
   }
 
-  // The shell (header/sidebar) wraps every route, including /login, since
-  // this app has no nested layout routes. Hide the authenticated chrome on
-  // the login screen so it renders as a proper full-bleed split view.
+  // The shell (header/sidebar) wraps every route, including /login and the
+  // "/" landing splash, since this app has no nested layout routes. Hide
+  // the authenticated chrome on those two so each renders as its own
+  // full-bleed screen instead of sitting inside the app frame.
   get isLoginPage(): boolean {
     return this.router.url.split("?")[0].startsWith("/login");
+  }
+
+  get isLandingPage(): boolean {
+    return this.router.url.split("?")[0] === "/";
+  }
+
+  get hideShell(): boolean {
+    return this.isLoginPage || this.isLandingPage;
   }
 
   onSearchInput(value: string): void {
