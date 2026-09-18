@@ -546,9 +546,9 @@ Managed Operations page (live throughput + quality, same claim data as Dashboard
 
 | AI Capability | Model/Service | Input | Processing | Output | Application Area | Business Value |
 |---|---|---|---|---|---|---|
-| Claim field extraction | Google Gemini (`AI_MODEL`, default alias `gemini-flash-latest`) via `google-generativeai` | Full document text (truncated to 60,000 chars) + list of 15 canonical field names | Forced JSON-mode generation; code then source-verifies every value and cross-checks for page conflicts | `{value, confidence, sourceText}` per field | Claim Queue upload pipeline | Removes manual retyping while keeping every value traceable to source |
+| Claim field extraction | Google Gemini (see §11 for exact model config) | Full document text (truncated to 60,000 chars) + list of 15 canonical field names | Forced JSON-mode generation; code then source-verifies every value and cross-checks for page conflicts | `{value, confidence, sourceText}` per field | Claim Queue upload pipeline | Removes manual retyping while keeping every value traceable to source |
 | Grounded chat | Same Gemini model | Question + constructed context (fields + top-3 keyword-relevant pages) | JSON-mode generation with a `found` flag; code-level grounding re-check against the sent context | Answer + source citation, or a canonical "not found"/"unverified" message | AI Claim Manager | Answers questions without re-reading source documents, with a provable non-hallucination mechanism |
-| Discovery assessment drafting | Same Gemini model | Pasted process description + a domain-specific agent whitelist | JSON-mode generation of scores, narrative, and roadmap; code filters `recommended_agents` against the whitelist, discarding/logging anything outside it | Suitability score, recommended agents, roadmap | Growth Studio → Discovery | Turns a free-text process description into a structured assessment without letting the model invent product names |
+| Discovery assessment drafting | Same Gemini model | Pasted process description + a domain-specific agent whitelist | JSON-mode generation of scores, narrative, and roadmap; code filters the recommended agents against the whitelist, discarding/logging anything outside it | Suitability score, recommended agents, roadmap | Growth Studio → Discovery | Turns a free-text process description into a structured assessment without letting the model invent product names |
 | Agent-simulation drafting | Same Gemini model | Already-extracted claim fields + a recommended-agent list | JSON-mode generation of per-agent output/reasoning + a proposed final status; code overrides low-confidence and missing-diagnosis/patient-name cases regardless of model output | Per-agent narrative + final status | Growth Studio → Implementation | Demonstrates the "agent team" concept on real data with hard compliance guardrails |
 | Deterministic fallback extraction | `RuleBasedProvider` (in-process regex engine, zero external dependency) | Same document text | Field-specific regex patterns with per-field base confidence scores | Same shape as the AI provider's output | Used automatically whenever `AI_API_KEY` is unset, provider ≠ "gemini", or the Gemini call throws | Guarantees the application **never stops working** end-to-end without an external AI key |
 | Text-to-speech | `pyttsx3` (offline OS voice engine — SAPI5, NSSpeechSynthesizer, or espeak depending on OS) | The exact answer text, verbatim | Local speech synthesis to a temporary WAV file | Real playable audio bytes | AI Claim Manager voice output → drives the robot avatar's real amplitude-based lip-sync | Enables genuine audio-driven animation, which the browser's native `SpeechSynthesis` API cannot support (it exposes no audio stream) |
@@ -809,9 +809,9 @@ Audit Log:            Every state-changing action appended to an in-memory audit
 
 | Integration | Purpose | Data Exchanged | Direction | Authentication | Business Value |
 |---|---|---|---|---|---|
-| **Google Gemini API** (`google-generativeai`) | Field extraction, grounded chat, structured-JSON drafting | Document text / questions / process descriptions (outbound); structured JSON (inbound) | Outbound request / inbound response | API key (`AI_API_KEY`, from `.env`) | Core AI capability of the application |
-| **Tesseract OCR** (via `pytesseract`) | OCR for scanned/low-text pages | Rendered page image (outbound, local process call — not a network API); recognized text (inbound) | Local subprocess, not a network integration | None (local binary) | Enables faxed/scanned documents to be processed without a text layer |
-| **pyttsx3** (offline OS TTS engine) | Speech synthesis for the AI Manager's voice output | Text (outbound to the OS engine); WAV audio (inbound) | Local, not a network integration | None | Enables genuine audio-driven avatar lip-sync |
+| **Google Gemini API** | Field extraction, grounded chat, structured-JSON drafting | Document text / questions / process descriptions (outbound); structured JSON (inbound) | Outbound request / inbound response | API key (`AI_API_KEY`, from `.env`) | Core AI capability of the application |
+| **Tesseract OCR** | OCR for scanned/low-text pages | Rendered page image (outbound, local process call — not a network API); recognized text (inbound) | Local subprocess, not a network integration | None (local binary) | Enables faxed/scanned documents to be processed without a text layer |
+| **pyttsx3** | Offline OS TTS engine -- speech synthesis for the AI Manager's voice output | Text (outbound to the OS engine); WAV audio (inbound) | Local, not a network integration | None | Enables genuine audio-driven avatar lip-sync |
 | **Browser SpeechRecognition API** | Voice input (STT) | Microphone audio → transcript | Browser-native, not a backend integration | None | Zero-cost voice input |
 
 **Not implemented:** payment systems, external analytics platforms, dedicated authentication providers (Auth0/Okta/etc.), CRM/ERP integrations, or any insurer eligibility-system integration (the eligibility lookup is a local, empty placeholder — see §7).
@@ -1089,19 +1089,19 @@ Talking point: "Every stage of our transformation methodology — Discovery, Blu
 | API | Method | Module | Purpose | AI Related |
 |---|---|---|---|---|
 | `/api/health` | GET | Core | Backend/AI-provider health check | No |
-| `/api/faxes/upload`, `/api/documents/upload` | POST | Documents | Synchronous upload + full pipeline | Yes |
-| `/api/faxes/upload-async`, `/api/documents/upload-async` | POST | Documents | Start async pipeline | Yes |
-| `/api/faxes/upload-status/{jobId}`, `/api/documents/upload-status/{jobId}` | GET | Documents | Poll pipeline progress | No |
+| `/api/faxes/upload` * | POST | Documents | Synchronous upload + full pipeline | Yes |
+| `/api/faxes/upload-async` * | POST | Documents | Start async pipeline | Yes |
+| `/api/faxes/upload-status/{jobId}` * | GET | Documents | Poll pipeline progress | No |
 | `/api/documents/{id}` | GET | Documents | Raw claim record | No |
 | `/api/documents/{id}/status` | GET | Documents | Simplified status | No |
 | `/api/documents/{id}/analysis` | GET | Documents | Field/document analysis summary | No |
 | `/api/documents/{id}/reprocess` | POST | Documents | Re-run extraction on existing text | Yes |
-| `/api/faxes`, `/api/claims` | GET | Claims | List claims by filter | No |
-| `/api/faxes/{id}`, `/api/claims/{id}` | GET | Claims | Full claim record | No |
+| `/api/faxes` * | GET | Claims | List claims by filter | No |
+| `/api/faxes/{id}` * | GET | Claims | Full claim record | No |
 | `/api/claims/{id}` | DELETE | Claims | Soft-delete | No |
 | `/api/claims/{id}/restore` | POST | Claims | Undo soft-delete | No |
-| `/api/faxes/{id}/decision`, `/api/claims/{id}` (PUT) | POST/PUT | Claims | Human decision + corrections | No |
-| `/api/faxes/{id}/audit-log`, `/api/claims/{id}/audit-log` | GET | Claims | Per-claim audit trail | No |
+| `/api/faxes/{id}/decision` * | POST | Claims | Human decision + corrections | No |
+| `/api/faxes/{id}/audit-log` * | GET | Claims | Per-claim audit trail | No |
 | `/api/claims/{id}/chat` | POST | Chat | Ask a grounded question | Yes |
 | `/api/claims/{id}/chat` | GET | Chat | Chat history | No |
 | `/api/claims/{id}/chat/new` | POST | Chat | Reset conversation | No |
@@ -1119,18 +1119,20 @@ Talking point: "Every stage of our transformation methodology — Discovery, Blu
 | `/api/revenue/calculate` | POST | Growth Studio | Revenue math | No |
 | `/api/governance/policy` | GET | Governance | Live policy thresholds | No |
 
+\* Also reachable under an additive alias path (`/api/documents/*` or `/api/claims/*`) that routes to the exact same handler — see §5's per-page API tables for both names on any specific endpoint.
+
 ---
 
 ## 29. Complete AI Inventory
 
 | AI Feature | Model | Provider | Input | Output | Page/Module | Processing |
 |---|---|---|---|---|---|---|
-| Claim field extraction | Gemini (`AI_MODEL`, default `gemini-flash-latest`) — deterministic regex fallback when unavailable | Google | Document text (truncated 60k chars) + field list | Per-field `{value, confidence, sourceText}` JSON | Fax Intake | JSON-mode generation + code-level source verification/conflict detection |
+| Claim field extraction | Gemini (default model in §11) — deterministic regex fallback when unavailable | Google | Document text (truncated 60k chars) + field list | Per-field `{value, confidence, sourceText}` JSON | Fax Intake | JSON-mode generation + code-level source verification/conflict detection |
 | Grounded chat | Same Gemini model — no fallback (unsupported message when unavailable) | Google | Question + field/context summary + top-3 relevant pages | `{found, answer, sourceField, sourcePage, sourceText}` JSON | AI Claim Manager | JSON-mode generation + code-level grounding re-check |
 | Discovery drafting | Same Gemini model — deterministic fallback formula when unavailable | Google | Process description + domain whitelist | Suitability score, agents, roadmap JSON | Growth Studio → Discovery | JSON-mode generation + whitelist filter |
 | Simulation drafting | Same Gemini model — deterministic fallback text when unavailable | Google | Extracted fields + agent list | Per-agent output/reasoning + final status JSON | Growth Studio → Implementation | JSON-mode generation + confidence/field-based code overrides |
-| Text-to-speech | Offline OS engine (SAPI5/NSSpeechSynthesizer/espeak via `pyttsx3`) — **not a generative AI model** | Local (no external provider) | Exact answer text | WAV audio bytes | AI Claim Manager | Local speech synthesis |
-| Speech-to-text | Browser `SpeechRecognition` — **not a generative AI model** | Browser vendor (Chrome/Edge, etc.) | Microphone audio | Transcript string | AI Claim Manager | Browser-native recognition |
+| Text-to-speech | Offline OS engine via `pyttsx3` (SAPI5, NSSpeechSynthesizer, or espeak) — **not a generative AI model** | Local (no external provider) | Exact answer text | WAV audio bytes | AI Claim Manager | Local speech synthesis |
+| Speech-to-text | Browser SpeechRecognition API — **not a generative AI model** | Browser vendor (Chrome, Edge, etc.) | Microphone audio | Transcript string | AI Claim Manager | Browser-native recognition |
 
 ---
 
