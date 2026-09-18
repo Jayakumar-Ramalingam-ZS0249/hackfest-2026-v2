@@ -60,8 +60,8 @@
 .status-chip.neutral .status-dot { display: none; }
 
 .error-banner {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--tint-danger-bg);
+  color: var(--color-accent-red);
   border-radius: var(--radius-md);
   padding: 12px 16px;
   margin-bottom: 16px;

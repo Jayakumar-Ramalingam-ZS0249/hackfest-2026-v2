@@ -60,15 +60,51 @@
     </div>
   </div>
 
-  <div class="empty-state" *ngIf="!faxQueue.length">
-    <ng-container [ngSwitch]="filter">
-      <span *ngSwitchCase="'deleted'">No deleted documents.</span>
-      <span *ngSwitchCase="'needs_review'">No documents currently need review.</span>
-      <span *ngSwitchCase="'resolved'">No resolved claims yet.</span>
-      <span *ngSwitchCase="'invalid'">No documents were rejected as invalid.</span>
-      <span *ngSwitchCase="'queued'">Nothing is queued for review right now.</span>
-      <span *ngSwitchDefault>Upload a fax PDF above to run the AI extraction pipeline.</span>
-    </ng-container>
+  <div class="empty-state" *ngIf="isDeletedView && !faxQueue.length">No deleted documents.</div>
+
+  <!-- Claim Information skeleton -- mirrors the exact two-panel layout used once a
+       document loads (same field grid, same Source Document panel position), so the
+       page doesn't jump/reflow when a real document appears. -->
+  <div class="panels" *ngIf="!activeFax && !isDeletedView">
+    <section class="panel skeleton-panel">
+      <div class="panel-header">
+        <span>👤 Claim Information</span>
+        <span class="confidence-chip skeleton-chip">Awaiting Document</span>
+      </div>
+      <div class="field-grid">
+        <div class="field field-placeholder" *ngFor="let key of fieldOrder">
+          <label>{{ fieldLabels[key] }}</label>
+          <input value="—" disabled />
+        </div>
+      </div>
+      <div class="eligibility-block">
+        <div class="panel-subheader">Document Summary</div>
+        <div class="summary-box summary-box-empty">No data available</div>
+      </div>
+    </section>
+
+    <section class="panel skeleton-panel">
+      <div class="panel-header">
+        <span>📄 Source Document</span>
+      </div>
+      <div class="fax-preview fax-preview-empty">
+        <div class="fax-preview-placeholder">
+          <span class="fax-preview-icon">📄</span>
+          <span>
+            <ng-container *ngIf="faxQueue.length; else noDocsHint">Select a document above to view it here.</ng-container>
+            <ng-template #noDocsHint>
+              <ng-container [ngSwitch]="filter">
+                <span *ngSwitchCase="'needs_review'">No documents currently need review.</span>
+                <span *ngSwitchCase="'resolved'">No resolved claims yet.</span>
+                <span *ngSwitchCase="'invalid'">No documents were rejected as invalid.</span>
+                <span *ngSwitchCase="'queued'">Nothing is queued for review right now.</span>
+                <span *ngSwitchDefault>Upload a fax PDF above — fields will auto-populate once the AI extraction pipeline finishes.</span>
+              </ng-container>
+            </ng-template>
+          </span>
+        </div>
+      </div>
+    </section>
   </div>
 
   <ng-container *ngIf="activeFax as fax">
@@ -137,11 +173,18 @@
           </div>
 
           <div class="field-grid">
-            <div class="field" *ngFor="let key of fieldOrder">
+            <div
+              class="field"
+              *ngFor="let key of fieldOrder"
+              [class.field-filling]="isFieldFilling(key)"
+              [class.field-just-filled]="justFilled.has(key)"
+            >
               <label>
                 {{ fieldLabels[key] }}
+                <span class="field-analyzing" *ngIf="isFieldFilling(key)"><span class="analyzing-dot"></span>Analyzing…</span>
                 <span
                   class="field-confidence"
+                  *ngIf="!isFieldFilling(key)"
                   [ngClass]="statusClass(fax.fields[key]?.status || 'not_found')"
                   title="Confidence: how confidently the system identified this specific field's value."
                 >
@@ -150,21 +193,24 @@
                 </span>
               </label>
               <input
-                [ngModel]="fieldValue(fax.fields[key])"
+                [ngModel]="isFieldFilling(key) ? scrambleDisplay[key] : fieldValue(fax.fields[key])"
                 (ngModelChange)="fax.fields[key].value = $event"
-                [ngClass]="statusClass(fax.fields[key]?.status || 'not_found')"
+                [disabled]="isFieldFilling(key)"
+                [ngClass]="isFieldFilling(key) ? 'field-scrambling' : statusClass(fax.fields[key]?.status || 'not_found')"
               />
-              <div class="field-meta" *ngIf="fax.fields[key]?.value">
-                <button class="source-btn" *ngIf="fax.fields[key]?.sourceText" (click)="viewSource(fax.fields[key])" title="Open the original document page used to identify this value.">
-                  📄 Page {{ fax.fields[key]?.page || '?' }} — View Source
-                </button>
-                <span class="badge-conflict" *ngIf="hasConflict(fax.fields[key])">⚠ Conflict Detected</span>
-                <span class="badge-unverified" *ngIf="isUnverified(fax.fields[key])">⚠ Requires Verification</span>
-                <span class="badge-verified-manager" *ngIf="fax.fields[key]?.managerVerified">✓ Manager Verified</span>
-              </div>
-              <div class="conflict-list" *ngIf="hasConflict(fax.fields[key])">
-                <div class="conflict-item" *ngFor="let c of fax.fields[key]?.conflicts">Page {{ c.page }}: {{ c.value }}</div>
-              </div>
+              <ng-container *ngIf="!isFieldFilling(key)">
+                <div class="field-meta" *ngIf="fax.fields[key]?.value">
+                  <button class="source-btn" *ngIf="fax.fields[key]?.sourceText" (click)="viewSource(fax.fields[key])" title="Open the original document page used to identify this value.">
+                    📄 Page {{ fax.fields[key]?.page || '?' }} — View Source
+                  </button>
+                  <span class="badge-conflict" *ngIf="hasConflict(fax.fields[key])">⚠ Conflict Detected</span>
+                  <span class="badge-unverified" *ngIf="isUnverified(fax.fields[key])">⚠ Requires Verification</span>
+                  <span class="badge-verified-manager" *ngIf="fax.fields[key]?.managerVerified">✓ Manager Verified</span>
+                </div>
+                <div class="conflict-list" *ngIf="hasConflict(fax.fields[key])">
+                  <div class="conflict-item" *ngFor="let c of fax.fields[key]?.conflicts">Page {{ c.page }}: {{ c.value }}</div>
+                </div>
+              </ng-container>
             </div>
           </div>
 

@@ -192,8 +192,8 @@
 }
 
 .error-banner {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--tint-danger-bg);
+  color: var(--color-accent-red);
   border-radius: var(--radius-md);
   padding: 10px 14px;
   margin-top: 12px;
@@ -227,7 +227,7 @@
   border: 1px solid var(--color-border);
 }
 .source-tag.ai {
-  background: #eef2ff;
+  background: var(--tint-info-bg);
   color: var(--color-primary);
   border-color: transparent;
 }
@@ -307,7 +307,7 @@
   border-radius: 999px;
 }
 .chip-green {
-  background: #ecfdf3;
+  background: var(--tint-success-bg);
   color: var(--color-accent-green);
 }
 .rejected-note {
@@ -468,15 +468,15 @@
   border-radius: 999px;
 }
 .badge-green {
-  background: #ecfdf3;
+  background: var(--tint-success-bg);
   color: var(--color-accent-green);
 }
 .badge-amber {
-  background: #fffbeb;
+  background: var(--tint-warning-bg);
   color: var(--color-accent-amber);
 }
 .badge-red {
-  background: #fef2f2;
+  background: var(--tint-danger-bg);
   color: var(--color-accent-red);
 }
 

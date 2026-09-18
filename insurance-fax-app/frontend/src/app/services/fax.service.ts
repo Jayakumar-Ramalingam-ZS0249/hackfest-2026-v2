@@ -82,19 +82,6 @@ export interface FaxSummary {
   patientName?: string | null;
 }
 
-export interface AttentionSummaryItem {
-  claimId: string;
-  filename: string;
-  reason: string;
-  priority: "HIGH" | "MEDIUM" | "LOW";
-  lastUpdated: string;
-}
-
-export interface AttentionSummary {
-  count: number;
-  items: AttentionSummaryItem[];
-}
-
 export interface ChatSource {
   field: string | null;
   page: number | null;
@@ -397,10 +384,6 @@ export class FaxService {
     if (filters.confidence) params["confidence"] = filters.confidence;
     if (filters.insurance) params["insurance"] = filters.insurance;
     return this.http.get<{ success: boolean; data: DashboardOverview }>(`${API_BASE}/dashboard/overview`, { params });
-  }
-
-  getAttentionSummary(): Observable<AttentionSummary> {
-    return this.http.get<AttentionSummary>(`${API_BASE}/dashboard/attention-summary`);
   }
 
   getInsuranceProviders(): Observable<string[]> {

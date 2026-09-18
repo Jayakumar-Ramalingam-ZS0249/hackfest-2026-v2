@@ -38,9 +38,9 @@
 }
 
 .success-banner {
-  background: #ecfdf3;
+  background: var(--tint-success-bg);
   color: var(--color-accent-green);
-  border: 1px solid #bbf7d0;
+  border: 1px solid var(--tint-success-border);
   border-radius: var(--radius-md);
   padding: 10px 16px;
   margin-bottom: 16px;
@@ -134,7 +134,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  background: #fff;
+  background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 10px 16px;
@@ -234,7 +234,7 @@
   padding: 24px 0;
 }
 .validation-card {
-  background: #fff;
+  background: var(--color-card);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-soft);
   border-radius: var(--radius-lg);
@@ -275,7 +275,7 @@
 }
 
 .summary-box {
-  background: #f8fafc;
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 12px 14px;
@@ -304,7 +304,7 @@
   border: 1px solid var(--color-border);
 }
 .btn-ghost-dark:hover {
-  background: #eef1f5;
+  background: var(--color-border);
 }
 .btn-primary {
   background: var(--color-accent-green);
@@ -339,7 +339,7 @@
   margin-bottom: 16px;
 }
 .confidence-chip {
-  background: #ecfdf3;
+  background: var(--tint-success-bg);
   color: var(--color-accent-green);
   font-size: 12px;
   font-weight: 700;
@@ -347,7 +347,7 @@
   border-radius: 999px;
 }
 .ocr-chip {
-  background: #eef2ff;
+  background: var(--tint-info-bg);
   color: var(--color-primary);
   font-size: 11px;
   font-weight: 700;
@@ -387,12 +387,12 @@
   width: 100%;
 }
 .field input.field-ok {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  border-color: var(--tint-success-border);
+  background: var(--tint-success-bg);
 }
 .field input.field-review {
-  border-color: #fde68a;
-  background: #fffbeb;
+  border-color: var(--tint-warning-border);
+  background: var(--tint-warning-bg);
 }
 
 .eligibility-block {
@@ -443,6 +443,79 @@
   font-size: 15px;
 }
 
+/* ===== Claim Information skeleton (no document open yet) -- mirrors the
+   real two-panel layout exactly so nothing reflows once a document loads. ===== */
+.skeleton-chip {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+}
+.field-placeholder input {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+.summary-box-empty {
+  color: var(--color-text-muted);
+}
+.fax-preview-empty {
+  min-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fax-preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 260px;
+  text-align: center;
+  color: rgba(226, 232, 240, 0.5);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.fax-preview-icon {
+  font-size: 28px;
+  opacity: 0.6;
+}
+
+/* ===== Per-field AI auto-fill reveal ===== */
+.field-analyzing {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+.analyzing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: scan-dot-pulse 0.8s ease-in-out infinite;
+}
+.field input.field-scrambling {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+  border-color: var(--color-primary-light);
+  background: linear-gradient(90deg, var(--tint-info-bg) 0%, var(--color-card) 50%, var(--tint-info-bg) 100%);
+  background-size: 220% 100%;
+  animation: field-scan 1s linear infinite;
+}
+.field-just-filled input {
+  animation: field-settle 0.55s ease;
+}
+@keyframes field-scan {
+  0% { background-position: 0% 0; }
+  100% { background-position: -220% 0; }
+}
+@keyframes field-settle {
+  0% { box-shadow: 0 0 0 3px rgba(16, 131, 197, 0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 131, 197, 0); }
+}
+
 /* ===== SOURCE REFERENCES / CONFLICTS / MANAGER VERIFICATION ===== */
 .field-meta {
   display: flex;
@@ -472,24 +545,24 @@
   border-radius: 999px;
 }
 .badge-conflict {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--tint-danger-bg);
+  color: var(--color-accent-red);
 }
 .badge-unverified {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--tint-warning-bg);
+  color: var(--color-accent-amber);
 }
 .badge-verified-manager {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--tint-info-bg);
+  color: var(--color-primary);
 }
 .conflict-list {
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
+  background: var(--tint-warning-bg);
+  border: 1px solid var(--tint-warning-border);
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 12px;
-  color: #9a3412;
+  color: var(--color-accent-amber);
 }
 .conflict-item {
   padding: 2px 0;

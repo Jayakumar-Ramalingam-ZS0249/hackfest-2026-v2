@@ -56,6 +56,14 @@ export class ClaimQueueComponent implements OnInit, OnDestroy {
   fieldOrder = FIELD_ORDER;
   fieldLabels = FIELD_LABELS;
 
+  // Per-field "AI auto-fill" reveal: once a document loads, every field
+  // shows scrambled placeholder characters and then locks in to its real
+  // value one at a time, instead of the whole form appearing at once.
+  filledFields = new Set<string>();
+  justFilled = new Set<string>();
+  scrambleDisplay: Record<string, string> = {};
+  private fillTimeouts: ReturnType<typeof setTimeout>[] = [];
+
   private routeSub?: Subscription;
   private uploadPollSub?: Subscription;
   private scrambleIntervalId?: ReturnType<typeof setInterval>;
@@ -71,7 +79,14 @@ export class ClaimQueueComponent implements OnInit, OnDestroy {
 
       const id = params.get("id");
       if (id) {
-        this.loadFax(id);
+        // `queue/:filter` and `queue/:filter/:id` are separate route configs
+        // pointing at this same component, so navigating between them
+        // destroys and recreates the component -- any instance field set
+        // before navigate() is gone by the time we get here. The "this load
+        // should animate" signal has to travel through router navigation
+        // state (history.state) instead, which survives that recreation.
+        const justUploaded = !!(history.state && history.state.justUploaded);
+        this.loadFax(id, justUploaded);
       } else {
         this.activeFax = null;
       }
@@ -82,6 +97,7 @@ export class ClaimQueueComponent implements OnInit, OnDestroy {
     this.routeSub?.unsubscribe();
     this.uploadPollSub?.unsubscribe();
     this.stopScrambleAnimation();
+    this.clearFillTimeouts();
   }
 
   refreshQueue(): void {
@@ -139,8 +155,9 @@ export class ClaimQueueComponent implements OnInit, OnDestroy {
           if (status.result) {
             // A fresh upload always lands in the "all" view so the manager
             // sees the result immediately, regardless of which filter they
-            // were on.
-            this.router.navigate(["/queue", "all", status.result.id]);
+            // were on. Only this load should play the field auto-fill
+            // animation -- selecting/approving/re-running should not.
+            this.router.navigate(["/queue", "all", status.result.id], { state: { justUploaded: true } });
           }
         },
         error: () => {
@@ -181,19 +198,95 @@ export class ClaimQueueComponent implements OnInit, OnDestroy {
     this.router.navigate(["/queue", this.filter, id]);
   }
 
-  private loadFax(id: string): void {
-    this.faxService.getFax(id).subscribe((record) => this.setActiveFax(record));
+  private loadFax(id: string, animate = false): void {
+    this.faxService.getFax(id).subscribe((record) => this.setActiveFax(record, animate));
   }
 
-  private setActiveFax(record: FaxRecord): void {
+  private setActiveFax(record: FaxRecord, animate = false): void {
     this.activeFax = record;
     this.reviewAcknowledged = false;
     this.activeSourceText = null;
+
+    if (animate) {
+      this.animateFieldReveal();
+    } else {
+      this.skipFieldReveal();
+    }
+  }
+
+  /** Show every field's real value immediately, with no scramble/reveal --
+   * used for every load except the one right after a fresh upload. */
+  private skipFieldReveal(): void {
+    this.clearFillTimeouts();
+    this.scrambleDisplay = {};
+    this.justFilled.clear();
+    this.filledFields = new Set(this.fieldOrder);
   }
 
   closeActiveDocument(): void {
     this.activeFax = null;
     this.router.navigate(["/queue", this.filter]);
+    this.clearFillTimeouts();
+    this.filledFields.clear();
+    this.justFilled.clear();
+    this.scrambleDisplay = {};
+  }
+
+  isFieldFilling(key: string): boolean {
+    return !!this.activeFax && !this.filledFields.has(key);
+  }
+
+  /** Scramble every field's placeholder immediately, then lock each one in to
+   * its real value in sequence -- an "AI is auto-filling this" reveal rather
+   * than the whole form just appearing at once. */
+  private animateFieldReveal(): void {
+    this.clearFillTimeouts();
+    this.filledFields.clear();
+    this.justFilled.clear();
+    this.scrambleDisplay = {};
+    const fax = this.activeFax;
+    if (!fax) return;
+
+    const STAGGER_MS = 160;
+    const SCRAMBLE_MS = 420;
+    const TICK_MS = 45;
+    const SETTLE_MS = 550;
+
+    for (const key of this.fieldOrder) {
+      this.scrambleDisplay[key] = this.randomScramble(this.fieldValue(fax.fields[key]).length);
+    }
+
+    this.fieldOrder.forEach((key, i) => {
+      const startDelay = i * STAGGER_MS;
+
+      const scrambleTick = () => {
+        if (this.activeFax !== fax || this.filledFields.has(key)) return;
+        this.scrambleDisplay[key] = this.randomScramble(this.fieldValue(fax.fields[key]).length);
+        this.fillTimeouts.push(setTimeout(scrambleTick, TICK_MS));
+      };
+
+      this.fillTimeouts.push(
+        setTimeout(scrambleTick, startDelay),
+        setTimeout(() => {
+          if (this.activeFax !== fax) return;
+          this.filledFields.add(key);
+          delete this.scrambleDisplay[key];
+          this.justFilled.add(key);
+          this.fillTimeouts.push(setTimeout(() => this.justFilled.delete(key), SETTLE_MS));
+        }, startDelay + SCRAMBLE_MS),
+      );
+    });
+  }
+
+  private randomScramble(length: number): string {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const len = Math.min(Math.max(length || 8, 4), 22);
+    return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  }
+
+  private clearFillTimeouts(): void {
+    this.fillTimeouts.forEach((t) => clearTimeout(t));
+    this.fillTimeouts = [];
   }
 
   reprocessWithAi(): void {
