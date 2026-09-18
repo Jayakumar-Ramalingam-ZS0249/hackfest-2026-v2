@@ -1,7 +1,7 @@
 import { CommonModule } from "@angular/common";
 import { Component, OnInit } from "@angular/core";
 import { FormsModule } from "@angular/forms";
-import { RouterLink } from "@angular/router";
+import { ActivatedRoute, RouterLink } from "@angular/router";
 
 import {
   AgentSimulationResult,
@@ -81,10 +81,16 @@ export class GrowthStudioComponent implements OnInit {
   revenueError = "";
   revenueResult: RevenueResult | null = null;
 
-  constructor(private faxService: FaxService) {}
+  constructor(private faxService: FaxService, private route: ActivatedRoute) {}
 
   ngOnInit(): void {
     this.loadFaxOptions();
+    // Lets the Transformation Factory funnel (and any other page) deep-link
+    // straight into a specific stage, e.g. /growth-studio?tab=architecture.
+    const requestedTab = this.route.snapshot.queryParamMap.get("tab") as StudioTab | null;
+    if (requestedTab && this.tabOrder.includes(requestedTab)) {
+      this.activeTab = requestedTab;
+    }
   }
 
   setTab(tab: StudioTab): void {

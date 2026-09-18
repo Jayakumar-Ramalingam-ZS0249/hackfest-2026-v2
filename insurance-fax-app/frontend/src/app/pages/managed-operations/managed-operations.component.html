@@ -1,0 +1,73 @@
+<div class="page">
+  <div class="ops-hero">
+    <span class="ops-eyebrow">Step 5 · Managed Agent Operations</span>
+    <h1>Operate and Optimize Agents at Scale</h1>
+    <p class="page-subtitle">
+      A 24x7 digital workforce that never queues — live system health and throughput for the claims
+      adjudication pipeline.
+    </p>
+  </div>
+
+  <div class="status-row">
+    <span class="status-chip" [class.online]="backendConnected" [class.offline]="backendConnected === false">
+      <span class="status-dot"></span>
+      {{ backendConnected === null ? "Checking…" : backendConnected ? "System Online" : "Offline" }}
+    </span>
+    <span class="status-chip neutral">AI Provider: {{ aiProviderLabel }}</span>
+    <span class="status-chip neutral">24x7 Digital Workforce</span>
+  </div>
+
+  <div class="error-banner" *ngIf="error">{{ error }}</div>
+  <div class="skeleton-grid" *ngIf="loading && !overview">
+    <div class="skeleton-tile" *ngFor="let i of [1, 2, 3, 4]"></div>
+  </div>
+
+  <ng-container *ngIf="overview as o">
+    <div class="kpi-grid">
+      <div class="kpi-card accent-primary">
+        <div class="kpi-value">{{ o.documentAnalytics.uploaded }}</div>
+        <div class="kpi-label">Claims Processed</div>
+      </div>
+      <div class="kpi-card accent-green">
+        <div class="kpi-value">{{ o.documentAnalytics.processed }}</div>
+        <div class="kpi-label">Fully Adjudicated</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">{{ o.documentAnalytics.ocrCompleted }}</div>
+        <div class="kpi-label">OCR Completed</div>
+      </div>
+      <div class="kpi-card accent-red">
+        <div class="kpi-value">{{ o.documentAnalytics.invalid }}</div>
+        <div class="kpi-label">Rejected — Data Quality</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><span>Agent Optimization Snapshot</span></div>
+      <div class="opt-row">
+        <div class="opt-stat">
+          <div class="opt-value">{{ o.quality.sourceMappingSuccessRate }}%</div>
+          <div class="opt-label">Source Mapping Success</div>
+        </div>
+        <div class="confidence-bar">
+          <div class="confidence-segment high" [style.width.%]="confidencePct(o.quality.highConfidenceFields)" [title]="o.quality.highConfidenceFields + ' high-confidence fields'"></div>
+          <div class="confidence-segment medium" [style.width.%]="confidencePct(o.quality.mediumConfidenceFields)" [title]="o.quality.mediumConfidenceFields + ' medium-confidence fields'"></div>
+          <div class="confidence-segment low" [style.width.%]="confidencePct(o.quality.lowConfidenceFields)" [title]="o.quality.lowConfidenceFields + ' low-confidence fields'"></div>
+        </div>
+        <div class="confidence-legend">
+          <span><i class="dot high"></i>High ({{ o.quality.highConfidenceFields }})</span>
+          <span><i class="dot medium"></i>Medium ({{ o.quality.mediumConfidenceFields }})</span>
+          <span><i class="dot low"></i>Low ({{ o.quality.lowConfidenceFields }})</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel cta-panel">
+      <div>
+        <div class="cta-title">Need the full operational picture?</div>
+        <p class="cta-text">Trend history, insurance-provider breakdowns, filters, and claim-level drill-down live on the main Dashboard.</p>
+      </div>
+      <a routerLink="/dashboard" class="btn btn-primary">Open Full Dashboard →</a>
+    </div>
+  </ng-container>
+</div>

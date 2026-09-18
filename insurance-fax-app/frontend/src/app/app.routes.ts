@@ -20,6 +20,17 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: "governance",
+    loadComponent: () => import("./pages/governance/governance.component").then((m) => m.GovernanceComponent),
+    canActivate: [authGuard],
+  },
+  {
+    path: "managed-operations",
+    loadComponent: () =>
+      import("./pages/managed-operations/managed-operations.component").then((m) => m.ManagedOperationsComponent),
+    canActivate: [authGuard],
+  },
+  {
     path: "queue/:filter",
     loadComponent: () => import("./pages/claim-queue/claim-queue.component").then((m) => m.ClaimQueueComponent),
     canActivate: [authGuard],

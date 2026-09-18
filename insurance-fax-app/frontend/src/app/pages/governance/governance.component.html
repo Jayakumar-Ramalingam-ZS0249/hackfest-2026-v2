@@ -1,0 +1,136 @@
+<div class="page">
+  <div class="gov-hero">
+    <span class="gov-eyebrow">Step 4 · Agent Governance Services</span>
+    <h1>Manage Risk and Compliance</h1>
+    <p class="page-subtitle">
+      Human oversight, explainability, auditability, and compliance — built into every agent decision, not
+      bolted on after. Every figure below is a live read of the real policy thresholds and claim data.
+    </p>
+  </div>
+
+  <div class="error-banner" *ngIf="error">{{ error }}</div>
+  <div class="skeleton-grid" *ngIf="loading && !overview">
+    <div class="skeleton-tile" *ngFor="let i of [1, 2, 3]"></div>
+  </div>
+
+  <ng-container *ngIf="policy as p">
+    <div class="panel">
+      <div class="panel-header"><span>Decision Policy — Live Thresholds</span></div>
+      <p class="panel-hint">
+        These are the exact settings the claim-intake pipeline enforces on every document — not illustrative
+        numbers.
+      </p>
+      <div class="policy-grid">
+        <div class="policy-card">
+          <div class="policy-title">Agent Can Decide</div>
+          <div class="policy-value">≥ {{ p.reviewMatchThreshold }}%</div>
+          <p class="policy-desc">Document match score at or above this cutoff, with every field confident, is queued straight-through with no human touch.</p>
+        </div>
+        <div class="policy-card amber">
+          <div class="policy-title">Human Required</div>
+          <div class="policy-value">{{ p.invalidMatchThreshold }}–{{ p.reviewMatchThreshold }}%</div>
+          <p class="policy-desc">Match score in this band, or any field confidence below {{ (p.lowConfidenceThreshold * 100) | number: "1.0-0" }}%, is routed to a human adjuster.</p>
+        </div>
+        <div class="policy-card red">
+          <div class="policy-title">Agent Rejects</div>
+          <div class="policy-value">&lt; {{ p.invalidMatchThreshold }}%</div>
+          <p class="policy-desc">Below this cutoff, the document is rejected outright — the agent never fabricates fields for irrelevant documents.</p>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="overview as o">
+    <div class="panel">
+      <div class="panel-header"><span>Decision Authority — Who Decided</span></div>
+      <div class="breakdown">
+        <div class="breakdown-row" *ngFor="let s of decisionSplit">
+          <span class="breakdown-label">{{ s.governanceLabel }}</span>
+          <div class="breakdown-track">
+            <div class="breakdown-fill" [class]="s.cssClass" [style.width.%]="s.percentage"></div>
+          </div>
+          <span class="breakdown-count">{{ s.count }} ({{ s.percentage }}%)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-header"><span>Explainability &amp; Auditability</span></div>
+        <div class="quality-grid">
+          <div class="quality-item wide accent-primary">
+            <span class="quality-value">{{ o.quality.sourceMappingSuccessRate }}%</span>
+            <span class="quality-label">Fields Traceable to Source Text</span>
+          </div>
+          <div class="quality-item accent-green">
+            <span class="quality-value">{{ o.quality.highConfidenceFields }}</span>
+            <span class="quality-label">High Confidence Fields</span>
+          </div>
+          <div class="quality-item accent-amber">
+            <span class="quality-value">{{ o.quality.mediumConfidenceFields }}</span>
+            <span class="quality-label">Medium Confidence Fields</span>
+          </div>
+          <div class="quality-item accent-red">
+            <span class="quality-value">{{ o.quality.lowConfidenceFields }}</span>
+            <span class="quality-label">Low Confidence Fields</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><span>Compliance Checklist</span></div>
+        <div class="checklist">
+          <div class="checklist-item">
+            <span class="checklist-check">✓</span>
+            <div>
+              <div class="checklist-title">Human Oversight</div>
+              <div class="checklist-detail">{{ o.summary.pendingReview }} claim(s) currently routed to a human adjuster.</div>
+            </div>
+          </div>
+          <div class="checklist-item">
+            <span class="checklist-check">✓</span>
+            <div>
+              <div class="checklist-title">Explainability</div>
+              <div class="checklist-detail">{{ o.quality.sourceMappingSuccessRate }}% of extracted fields link back to verified source text.</div>
+            </div>
+          </div>
+          <div class="checklist-item">
+            <span class="checklist-check">✓</span>
+            <div>
+              <div class="checklist-title">Auditability</div>
+              <div class="checklist-detail">Every field correction and decision is timestamped and logged — see the trail below.</div>
+            </div>
+          </div>
+          <div class="checklist-item">
+            <span class="checklist-check">✓</span>
+            <div>
+              <div class="checklist-title">Compliance</div>
+              <div class="checklist-detail">{{ o.quality.validationFailures }} document(s) rejected for failing relevance checks.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><span>Recent Decision Audit Trail</span></div>
+      <div class="table-wrap" *ngIf="recentActivity.length; else noActivity">
+        <table class="data-table">
+          <thead>
+            <tr><th>Time</th><th>Claim ID</th><th>Action</th><th>Status</th><th>User</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let a of recentActivity" [routerLink]="['/queue/all', a.claimId]">
+              <td>{{ relativeTime(a.timestamp) }}</td>
+              <td class="mono">{{ a.claimId }}</td>
+              <td>{{ a.action }}</td>
+              <td><span class="status-chip" [class]="a.status">{{ a.status || "—" }}</span></td>
+              <td>{{ a.user }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noActivity><div class="empty-note">No governance activity recorded yet.</div></ng-template>
+    </div>
+  </ng-container>
+</div>

@@ -1,0 +1,16 @@
+<div class="funnel">
+  <ng-container *ngFor="let stage of stages; let last = last">
+    <a
+      class="funnel-card"
+      [class.highlight]="stage.step === 5"
+      [routerLink]="stage.routerLink"
+      [queryParams]="stage.queryParams || {}"
+    >
+      <span class="funnel-badge">{{ stage.step }}</span>
+      <h3 class="funnel-title">{{ stage.title }}</h3>
+      <p class="funnel-desc">{{ stage.description }}</p>
+      <span class="funnel-link">{{ stage.linkLabel }}</span>
+    </a>
+    <span class="funnel-connector" *ngIf="!last"></span>
+  </ng-container>
+</div>

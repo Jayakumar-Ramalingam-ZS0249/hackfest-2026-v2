@@ -200,6 +200,14 @@ export interface HealthStatus {
   aiProvider: string;
 }
 
+export interface GovernancePolicy {
+  invalidMatchThreshold: number;
+  reviewMatchThreshold: number;
+  lowConfidenceThreshold: number;
+  aiProvider: string;
+  aiConfigured: boolean;
+}
+
 export interface DashboardStatistics {
   totalClaims: number;
   resolved: number;
@@ -441,5 +449,9 @@ export class FaxService {
 
   getHealth(): Observable<HealthStatus> {
     return this.http.get<HealthStatus>(`${API_BASE}/health`);
+  }
+
+  getGovernancePolicy(): Observable<GovernancePolicy> {
+    return this.http.get<GovernancePolicy>(`${API_BASE}/governance/policy`);
   }
 }

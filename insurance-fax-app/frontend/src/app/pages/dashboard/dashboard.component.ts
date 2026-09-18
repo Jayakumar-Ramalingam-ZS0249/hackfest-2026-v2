@@ -3,6 +3,7 @@ import { Component, OnInit } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { RouterLink } from "@angular/router";
 
+import { TransformationFunnelComponent } from "../../components/transformation-funnel/transformation-funnel.component";
 import {
   AttentionItem,
   DashboardOverview,
@@ -15,7 +16,7 @@ type DatePreset = "today" | "yesterday" | "last7" | "last30" | "this_month" | "l
 @Component({
   selector: "app-dashboard",
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TransformationFunnelComponent],
   templateUrl: "./dashboard.component.html",
   styleUrls: ["./dashboard.component.scss"],
 })

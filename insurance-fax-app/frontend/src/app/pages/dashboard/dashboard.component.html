@@ -17,6 +17,18 @@
     </div>
   </div>
 
+  <!-- Legacy-to-Agent Transformation Factory -- the commercialization service-line
+       funnel, always visible regardless of filters/loading state since it's
+       navigational, not claim data. -->
+  <div class="panel transformation-panel">
+    <div class="panel-header">
+      <span>Legacy-to-Agent Transformation Factory</span>
+      <span class="panel-header-tag">Commercialization · A New Service Line</span>
+    </div>
+    <p class="panel-hint">A business-led framework for turning human-executed processes into agent-orchestrated, human-governed operations. Select a stage to open it.</p>
+    <app-transformation-funnel></app-transformation-funnel>
+  </div>
+
   <div class="filter-bar" [class.open]="filtersOpen">
     <div class="filter-bar-title">Dashboard Filters</div>
     <div class="filter-grid">
