@@ -153,7 +153,7 @@ def _fallback_assessment(process_text: str, domain: str, whitelist: list[str]) -
             f"{human_actors} distinct role{'s' if human_actors != 1 else ''}, with a hand-off at each stage."
         ),
         "future_state": f"An agent team ({', '.join(whitelist)}) automates the repetitive steps of this process.",
-        "roadmap": ["Assess current process", "Pilot agent architecture", "Roll out to production", "Monitor and tune"],
+        "roadmap": ["Pilot agent architecture", "Roll out to production", "Monitor and tune"],
     }
 
 

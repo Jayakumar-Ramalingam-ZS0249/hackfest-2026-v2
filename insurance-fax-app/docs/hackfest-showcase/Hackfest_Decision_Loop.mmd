@@ -1,0 +1,24 @@
+%% Hackfest_Decision_Loop.mmd
+%% Closed-loop decision diagram. The loop today closes structurally (I -> A),
+%% but does NOT close adaptively -- thresholds are static and do not learn
+%% from prior outcomes. This is marked explicitly, not glossed over.
+flowchart LR
+    P["Prediction / Signal<br/>[PARTIALLY IMPLEMENTED]"]
+    D["Decision<br/>3 policy thresholds<br/>[IMPLEMENTED]"]
+    A["Action<br/>claim status transition<br/>[IMPLEMENTED]"]
+    O["Outcome<br/>resolved / needs_review / invalid<br/>[IMPLEMENTED]"]
+    K["KPI<br/>Governance / Managed Operations<br/>[IMPLEMENTED]"]
+    F["Feedback<br/>manager corrections<br/>[IMPLEMENTED -- captured, not reused]"]
+    L["Learning<br/>threshold / model tuning<br/>[PROPOSED]"]
+    N["Next Decision<br/>same static thresholds<br/>[PARTIALLY IMPLEMENTED]"]
+
+    P --> D --> A --> O --> K --> F --> L --> N
+    N -.->|structural loop closes here| P
+
+    classDef implemented fill:#0f2d1c,stroke:#3ddc84,color:#e7ebf3,stroke-width:2px;
+    classDef partial fill:#2d2410,stroke:#f0a83e,color:#e7ebf3,stroke-width:2px;
+    classDef proposed fill:#2a1030,stroke:#b06bf0,color:#e7ebf3,stroke-width:2px,stroke-dasharray: 5 4;
+
+    class D,A,O,K,F implemented
+    class P,N partial
+    class L proposed

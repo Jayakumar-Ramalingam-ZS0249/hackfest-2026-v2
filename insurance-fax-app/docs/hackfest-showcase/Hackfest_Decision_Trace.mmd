@@ -1,0 +1,33 @@
+%% Hackfest_Decision_Trace.mmd
+%% A representative, real scenario traced through the actual pipeline logic
+%% in agents/orchestrator.py, relevance_service.py, and implementation.py.
+%% Values shown (25% / 60% / 70%) are the real configured thresholds, not illustrative.
+flowchart TD
+    IN["INPUT<br/>Uploaded claim PDF<br/>(professional_insurance_claim.pdf)"]
+    PRED["PREDICTION / SIGNAL<br/>Relevance match score: 78/100<br/>Per-field AI confidence: 88% avg<br/><i>DocumentRelevanceService + ClaimExtractionService</i>"]
+    RULE{"RULE CHECK<br/>match score &lt; 25? NO<br/>match score &lt; 60? NO<br/>every field &ge; 70% confident? YES"}
+    OPT_A["OPTION A<br/>Reject document<br/>(match &lt; 25%)"]
+    OPT_B["OPTION B<br/>Route to human<br/>(25-60%, or any field &lt; 70%)"]
+    OPT_C["OPTION C<br/>Auto-process straight-through<br/>(&ge;60% AND all fields &ge;70%)"]
+    OPTSEL["OPTIMIZATION<br/>[PROPOSED]<br/><i>today: the threshold check itself selects the\noutcome deterministically -- no alternative-\naction scoring/ranking exists yet</i>"]
+    AGENT["AI AGENT<br/>Implementation agent drafts a simulated<br/>per-agent narrative (Gemini JSON-mode)<br/><i>overall_confidence=88% is &ge;60%, so the AI call runs</i>"]
+    REC["RECOMMENDATION<br/>final_status = Auto-Approved<br/>(code can still override: force review if no<br/>patient name; force-flag if no diagnosis)"]
+    GOV["GOVERNANCE<br/>Claim status set to auto_filled<br/>Visible live on the Governance page"]
+    OUT["OUTCOME<br/>Reviewer opens the claim, confirms,<br/>clicks 'Approve &amp; Resolve'<br/>status -> resolved"]
+    KPI["KPI<br/>summary.resolved +1<br/>financial.approvedValue updated<br/>quality.sourceMappingSuccessRate recomputed"]
+    LEARN["LEARNING<br/>[PROPOSED]<br/>Any manual correction here updates only<br/>this claim record -- not thresholds or the model"]
+    NEXT["NEXT DECISION<br/>Same 25% / 60% / 70% thresholds<br/>applied identically to the next upload"]
+
+    IN --> PRED --> RULE
+    RULE -->|"&lt;25%"| OPT_A
+    RULE -->|"25-60% or field &lt;70%"| OPT_B
+    RULE -->|"&ge;60% and all fields &ge;70%"| OPT_C
+    OPT_A & OPT_B & OPT_C --> OPTSEL --> AGENT --> REC --> GOV --> OUT --> KPI --> LEARN --> NEXT
+
+    classDef implemented fill:#0f2d1c,stroke:#3ddc84,color:#e7ebf3,stroke-width:2px;
+    classDef proposed fill:#2a1030,stroke:#b06bf0,color:#e7ebf3,stroke-width:2px,stroke-dasharray: 5 4;
+    classDef decision fill:#1a1530,stroke:#f0a83e,color:#e7ebf3,stroke-width:2px;
+
+    class IN,PRED,OPT_A,OPT_B,OPT_C,AGENT,REC,GOV,OUT,KPI implemented
+    class RULE decision
+    class OPTSEL,LEARN proposed

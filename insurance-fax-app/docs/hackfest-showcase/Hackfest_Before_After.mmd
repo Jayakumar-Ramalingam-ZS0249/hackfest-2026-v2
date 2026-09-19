@@ -1,0 +1,40 @@
+%% Hackfest_Before_After.mmd
+%% BEFORE = the manual process this application replaces (see docs Page 2).
+%% AFTER = the actual current-state pipeline (verified), NOT an aspirational one.
+%% Optimization and Learning are shown dashed/proposed in the AFTER state --
+%% they are the honest remaining gap, not implemented functionality.
+flowchart TB
+    subgraph BEFORE["BEFORE -- Manual Process"]
+        direction TB
+        B1["Data<br/>faxed / scanned claim"] --> B2["Analyst reads document"]
+        B2 --> B3["Manual review<br/>retype ~15 fields by hand"]
+        B3 --> B4["Business rule check<br/>judgment-based, not codified"]
+        B4 --> B5["Decision<br/>varies by reviewer"]
+        B5 --> B6["Action"]
+    end
+
+    subgraph AFTER["AFTER -- Zuci Agent Services (verified current state)"]
+        direction TB
+        A1["Data<br/>PDF upload [IMPLEMENTED]"] --> A2["Prediction / Signal<br/>relevance score + AI confidence<br/>[PARTIALLY IMPLEMENTED]"]
+        A2 --> A3["Rules &amp; Policy<br/>3 configured thresholds<br/>[IMPLEMENTED]"]
+        A3 --> A4["Optimization<br/>ROI/Revenue math only<br/>[PARTIALLY IMPLEMENTED]"]
+        A4 --> A5["AI Agent<br/>4 bounded, code-governed calls<br/>[IMPLEMENTED]"]
+        A5 --> A6["Governed Recommendation<br/>[IMPLEMENTED]"]
+        A6 --> A7["Action<br/>human Approve &amp; Resolve<br/>[IMPLEMENTED]"]
+        A7 --> A8["Outcome<br/>[IMPLEMENTED]"]
+        A8 --> A9["KPI<br/>live Governance/Ops analytics<br/>[IMPLEMENTED]"]
+        A9 --> A10["Learning<br/>[PROPOSED]"]
+        A10 --> A11["Next Decision<br/>[PARTIALLY IMPLEMENTED]"]
+    end
+
+    BEFORE ~~~ AFTER
+
+    classDef before fill:#2a1015,stroke:#ff6b6b,color:#e7ebf3,stroke-width:2px;
+    classDef implemented fill:#0f2d1c,stroke:#3ddc84,color:#e7ebf3,stroke-width:2px;
+    classDef partial fill:#2d2410,stroke:#f0a83e,color:#e7ebf3,stroke-width:2px;
+    classDef proposed fill:#2a1030,stroke:#b06bf0,color:#e7ebf3,stroke-width:2px,stroke-dasharray: 5 4;
+
+    class B1,B2,B3,B4,B5,B6 before
+    class A1,A3,A5,A6,A7,A8,A9 implemented
+    class A2,A4,A11 partial
+    class A10 proposed

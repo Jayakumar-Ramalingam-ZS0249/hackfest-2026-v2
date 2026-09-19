@@ -1,0 +1,32 @@
+%% Hackfest_Architecture.mmd
+%% Technical architecture using the ACTUAL verified stack -- see Hackfest_Architecture.md
+flowchart TD
+    FE["Frontend<br/>Angular 17.3, TypeScript, SCSS<br/>standalone components, lazy routes"]
+    API["API Layer<br/>FastAPI (Python) -- 10 route modules<br/>Pydantic validation, thin routers"]
+    ORCH["Orchestration<br/>agents/orchestrator.py :: run_pipeline()"]
+
+    subgraph DECISION["Decision Layer"]
+        direction TB
+        PRED["Prediction / Signal<br/>DocumentRelevanceService<br/>ClaimExtractionService"]
+        RULES["Rules<br/>core/config.py thresholds<br/>25% / 60% / 0.70"]
+        POLICY["Policy<br/>agents/discovery.py<br/>AGENT_WHITELIST"]
+        OPT["Optimization<br/>ROI / Revenue calculators<br/>[PARTIAL -- fixed formulas, no solver]"]
+        AGENT["AI Agent<br/>Google Gemini via one shared<br/>AIProvider abstraction<br/>RuleBasedProvider fallback"]
+    end
+
+    ACTION["Action Layer<br/>claim status transition<br/>POST /api/faxes/{id}/decision<br/>human 'Approve &amp; Resolve'"]
+    OUTCOME["Outcome / KPI<br/>analytics_service.py<br/>Governance + Managed Operations pages"]
+    FEEDBACK["Feedback / Learning<br/>[PROPOSED -- not implemented]"]
+
+    FE -->|HttpClient, JSON| API --> ORCH --> DECISION
+    PRED --> RULES --> POLICY --> OPT --> AGENT
+    DECISION --> ACTION --> OUTCOME --> FEEDBACK
+    FEEDBACK -.->|no automated path yet| PRED
+
+    classDef real fill:#0d2438,stroke:#3aa9e8,color:#e7ebf3,stroke-width:2px;
+    classDef partial fill:#2d2410,stroke:#f0a83e,color:#e7ebf3,stroke-width:2px;
+    classDef proposed fill:#2a1030,stroke:#b06bf0,color:#e7ebf3,stroke-width:2px,stroke-dasharray: 5 4;
+
+    class FE,API,ORCH,PRED,RULES,POLICY,AGENT,ACTION,OUTCOME real
+    class OPT partial
+    class FEEDBACK proposed

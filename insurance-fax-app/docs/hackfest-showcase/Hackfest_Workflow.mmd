@@ -1,0 +1,25 @@
+%% Hackfest_Workflow.mmd
+%% Executive flow: DATA -> PREDICTION -> RULES & POLICY -> OPTIMIZATION -> AI AGENT
+%% -> OUTCOME -> KPI -> LEARNING -> NEXT DECISION, mapped to real components.
+%% Status labels reflect verified implementation state -- see Hackfest_Evidence_Mapping.md
+flowchart TD
+    A["DATA<br/>Uploaded PDF claim document<br/>(fax / scan)<br/><b>[IMPLEMENTED]</b>"]
+    B["PREDICTION<br/>Relevance match score +<br/>per-field AI extraction confidence<br/><b>[PARTIALLY IMPLEMENTED]</b><br/><i>no trained forecasting model</i>"]
+    C["RULES &amp; POLICY<br/>3 configured thresholds<br/>25% / 60% / 70%<br/>+ Discovery agent whitelist<br/><b>[IMPLEMENTED]</b>"]
+    D["OPTIMIZATION<br/>ROI / Revenue calculators<br/>(fixed formulas, not a solver)<br/><b>[PARTIALLY IMPLEMENTED]</b><br/><i>alternative-action comparison: PROPOSED</i>"]
+    E["AI AGENT<br/>4 bounded Gemini calls<br/>(Extraction, Chat, Discovery, Implementation)<br/><b>[IMPLEMENTED]</b><br/><i>model drafts, code decides</i>"]
+    F["OUTCOME<br/>Claim status set:<br/>auto_filled / needs_review / resolved / invalid<br/><b>[IMPLEMENTED]</b>"]
+    G["KPI<br/>Governance + Managed Operations<br/>live analytics (analytics_service.py)<br/><b>[IMPLEMENTED]</b>"]
+    H["LEARNING<br/>Corrections update only the<br/>current claim record<br/><b>[PROPOSED]</b><br/><i>no retraining / threshold tuning</i>"]
+    I["NEXT DECISION<br/>Same static thresholds applied<br/>to the next claim<br/><b>[PARTIALLY IMPLEMENTED]</b>"]
+
+    A --> B --> C --> D --> E --> F --> G --> H --> I
+    I -.->|closes the loop back to| A
+
+    classDef implemented fill:#0f2d1c,stroke:#3ddc84,color:#e7ebf3,stroke-width:2px;
+    classDef partial fill:#2d2410,stroke:#f0a83e,color:#e7ebf3,stroke-width:2px;
+    classDef proposed fill:#2a1030,stroke:#b06bf0,color:#e7ebf3,stroke-width:2px,stroke-dasharray: 5 4;
+
+    class A,C,E,F,G implemented
+    class B,D,I partial
+    class H proposed

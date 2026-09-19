@@ -154,6 +154,7 @@
   color: var(--color-text-muted);
   margin: 0 0 16px;
   line-height: 1.5;
+  overflow-wrap: break-word;
 }
 .panel-hint a {
   color: var(--color-primary);
@@ -250,6 +251,7 @@
   margin: 16px 0;
 }
 .metric-card {
+  min-width: 0;
   background: var(--color-bg);
   border-left: 3px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -318,11 +320,12 @@
 
 .two-col {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
   margin-top: 8px;
 }
 .state-block {
+  min-width: 0;
   background: var(--color-bg);
   border-radius: var(--radius-md);
   padding: 12px 14px;
@@ -335,6 +338,7 @@
   color: var(--color-text);
   margin: 0;
   line-height: 1.5;
+  overflow-wrap: break-word;
 }
 
 /* ===== Architecture flow diagram ===== */
@@ -389,6 +393,28 @@
   font-size: 12.5px;
   color: var(--color-text-muted);
   margin: 0 0 16px;
+}
+.empty-state-form {
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+/* ===== Inline "generate an assessment right here" quick-start, shown on
+   Architecture/Implementation tabs instead of a dead-end "go elsewhere"
+   prompt -- reuses the exact same Discovery call/state as the Discovery tab. ===== */
+.inline-discovery {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin: 12px 0;
+  background: var(--color-bg);
+}
+.inline-discovery .no-assessment-note {
+  padding-top: 0;
+}
+.inline-discovery .process-textarea {
+  background: var(--color-card);
 }
 
 /* ===== Implementation ===== */

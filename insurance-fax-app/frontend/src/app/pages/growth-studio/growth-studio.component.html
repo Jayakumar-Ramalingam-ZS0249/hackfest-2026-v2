@@ -119,7 +119,12 @@
 
   <!-- ================= ARCHITECTURE ================= -->
   <section class="panel" *ngIf="activeTab === 'architecture'">
-    <div class="panel-header"><span>Recommended Architecture</span></div>
+    <div class="panel-header">
+      <span>Recommended Architecture</span>
+      <button class="btn btn-ghost-dark small" *ngIf="assessment" (click)="setTab('discovery')">
+        View full Discovery details →
+      </button>
+    </div>
     <p class="panel-hint">
       This shows the recommended architecture. Implementation runs it against a real document.
     </p>
@@ -141,8 +146,21 @@
       <div class="empty-state">
         <div class="empty-state-icon">◇</div>
         <div class="empty-state-title">No architecture yet</div>
-        <p class="empty-state-text">Run a Discovery assessment first to see its recommended architecture here.</p>
-        <button class="btn btn-ghost-dark" (click)="setTab('discovery')">Go to Discovery →</button>
+        <p class="empty-state-text">Describe the process below to generate one right here — no need to switch tabs.</p>
+        <div class="empty-state-form">
+          <textarea
+            class="process-textarea"
+            rows="5"
+            placeholder="e.g. 1. Fax received with patient demographics and diagnosis. 2. Clinical reviewer checks the diagnosis against policy criteria. 3. Prior authorization decision recorded..."
+            [(ngModel)]="processText"
+          ></textarea>
+          <div class="discovery-actions">
+            <button class="btn btn-primary" [disabled]="discoveryLoading" (click)="runDiscovery()">
+              {{ discoveryLoading ? "Assessing…" : "Run Discovery Assessment" }}
+            </button>
+          </div>
+          <div class="error-banner" *ngIf="discoveryError">{{ discoveryError }}</div>
+        </div>
       </div>
     </ng-template>
   </section>
@@ -170,8 +188,20 @@
       <a class="view-link" [routerLink]="['/queue', 'all', fax.id]">View full record →</a>
     </div>
 
-    <div class="no-assessment-note" *ngIf="!assessment">
-      ⚠ Run a Discovery assessment on the Discovery tab first — the simulation needs to know which agents to run.
+    <div class="inline-discovery" *ngIf="!assessment">
+      <div class="no-assessment-note">⚠ No agent team yet — describe the process below to generate one, so the simulation knows which agents to run.</div>
+      <textarea
+        class="process-textarea"
+        rows="4"
+        placeholder="e.g. 1. Fax received with patient demographics and diagnosis. 2. Clinical reviewer checks the diagnosis against policy criteria. 3. Prior authorization decision recorded..."
+        [(ngModel)]="processText"
+      ></textarea>
+      <div class="discovery-actions">
+        <button class="btn btn-primary" [disabled]="discoveryLoading" (click)="runDiscovery()">
+          {{ discoveryLoading ? "Assessing…" : "Run Discovery Assessment" }}
+        </button>
+      </div>
+      <div class="error-banner" *ngIf="discoveryError">{{ discoveryError }}</div>
     </div>
 
     <button class="btn btn-primary" [disabled]="!canRunSimulation" (click)="runSimulation()">
