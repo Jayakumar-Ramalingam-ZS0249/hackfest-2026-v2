@@ -1,8 +1,0 @@
-<app-card [hoverable]="true" [class]="hostClass()">
-  <span class="kpi-card__accent-bar" aria-hidden="true"></span>
-  <span class="kpi-card__label">{{ label() }}</span>
-  <span class="kpi-card__value">{{ value() }}</span>
-  @if (hint()) {
-    <span class="kpi-card__hint">{{ hint() }}</span>
-  }
-</app-card>
